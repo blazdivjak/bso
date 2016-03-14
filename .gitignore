@@ -1,0 +1,10 @@
+*.h
+*.map
+*.z1
+*.a
+*.d
+*.o
+*.ihex
+*.csc
+symbols.c
+Makefile.target
