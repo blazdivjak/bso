@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = assigment2
+CONTIKI_PROJECT = assignment2
 all: $(CONTIKI_PROJECT)
 CONTIKI=/home/user/contiki
 CONTIKI_WITH_RIME = 1
