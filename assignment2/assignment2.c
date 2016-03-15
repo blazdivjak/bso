@@ -125,11 +125,9 @@ PROCESS_THREAD (temp_process, ev, data)
       minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
 	    printf ("Temp = %c%d.%04d\n", minus, tempint, tempfrac);
 
-		  //TODO: Send temps
-
 		  //send temp		
-		  //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
-      packetbuf_copyfrom(1, 2);
+		  packetbuf_copyfrom(raw, 2);
+      //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
 	    addr_send.u8[0] = 3;
 	    addr_send.u8[1] = 0;
 	    mesh_send(&mesh, &addr_send);
