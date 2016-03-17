@@ -75,7 +75,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops)
 
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 /*---------------------------------------------------------------------------*/
-/* Set my Address 
+/* Set my Address */
 /*---------------------------------------------------------------------------*/
 static struct etimer et;
 PROCESS_THREAD(assignment2, ev, data)
@@ -109,7 +109,7 @@ PROCESS_THREAD(assignment2, ev, data)
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
-/* Temperature sensing
+/* Temperature sensing */
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD (temp_process, ev, data)
 {
