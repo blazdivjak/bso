@@ -49,6 +49,26 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops)
 	 from->u8[0], from->u8[1],
 	 packetbuf_datalen(), (char *)packetbuf_dataptr(), packetbuf_datalen());
 
+  int16_t  tempint;
+  uint16_t tempfrac;
+  int16_t  raw;
+  uint16_t absraw;
+  int16_t  sign = 1;
+  char     minus = ' ';
+
+  char *rcv_data = (char *)packetbuf_dataptr();
+  raw = ((rcv_data[0] & 0xff)<<8) + (rcv_data[1] & 0xff);
+
+  absraw = raw;
+  if (raw < 0) { // Perform 2C's if sensor returned negative data
+    absraw = (raw ^ 0xFFFF) + 1;
+    sign = -1;
+  }
+  tempint  = (absraw >> 8) * sign;
+  tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
+  minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
+  printf ("Received temp = %c%d.%04d\n", minus, tempint, tempfrac);
+
   //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
   //mesh_send(&mesh, from);
 }
@@ -123,10 +143,12 @@ PROCESS_THREAD (temp_process, ev, data)
 	    tempint  = (absraw >> 8) * sign;
       tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
       minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
-	    printf ("Temp = %c%d.%04d\n", minus, tempint, tempfrac);
+	    printf ("Temp off sensor = %c%d.%04d\n", minus, tempint, tempfrac);
+
+      char msg[2] = {((raw & 0xff00)>>8), (raw&0xff)};
 
 		  //send temp		
-		  packetbuf_copyfrom(raw, 2);
+		  packetbuf_copyfrom(msg, 2);
       //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
 	    addr_send.u8[0] = 3;
 	    addr_send.u8[1] = 0;
