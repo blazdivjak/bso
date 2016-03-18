@@ -17,11 +17,14 @@
 /*
 * Our assignment2 process
 */
+#define FROM_MOTE_ADDRESS 1
+#define TO_MOTE_ADDRESS 3
 #define MESSAGE "Hello"
+#define QUEUE_SIZE 256
 
 /*Static values*/
 static struct mesh_conn mesh;
-const char * queue[16];
+//const char * queue[QUEUE_SIZE];
 //packet queue
 static uint8_t packetIndex = 0;
 static int myAddress = 0;
@@ -76,10 +79,10 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   printf("Data received from %d.%d: %d bytes\n",
   from->u8[0], from->u8[1], packetbuf_datalen(), packetbuf_datalen());
 
-  if (myAddress == 1){
+  if (myAddress == FROM_MOTE_ADDRESS){
     // receive ACK and clear queue
 
-  } else if (myAddress == 3){
+  } else if (myAddress == TO_MOTE_ADDRESS){
     // receive data, print to STD_OUT and send ACK
     int i;
     for(i=0; i<packetbuf_datalen(); i+=3){
@@ -88,7 +91,6 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
 
   }
   
-
   //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
   //mesh_send(&mesh, from);
 }
@@ -98,7 +100,10 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 /*---------------------------------------------------------------------------*/
 
-static void send_temp(){
+/*---------------------------------------------------------------------------*/
+/* Send temperature to 3.0 */
+/*---------------------------------------------------------------------------*/
+static void send_temperature(){
   //temperature sensing
   int16_t  tempint;
   uint16_t tempfrac;
@@ -120,24 +125,40 @@ static void send_temp(){
   tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
   minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
 
-  // Assable the message
+  //Save message to queue
   char msg[2] = {((raw & 0xff00)>>8), (raw&0xff)};
-  queue[packetIndex]=msg;      
-  char msg_with_index[3]={packetIndex, msg[0], msg[1]};
-  packetIndex++;
-  printf ("Index: %3d - temp off sensor = %c%d.%04d\n", packetIndex, minus, tempint, tempfrac);
-  char msg_with_index_doubled[6] = {msg_with_index[2], msg_with_index[1], msg_with_index[0], msg_with_index[2], msg_with_index[1], msg_with_index[0]};
-  printf ("Sending %s\n", msg_with_index_doubled);
+  //queue[packetIndex]=sprintf(msg,"%s");
+  int8_t message_size = 3;
 
-  //send temp   
-  packetbuf_copyfrom(msg_with_index_doubled, 6);
-  addr_send.u8[0] = 3;
+  //Create message and piggy back unsent messages  
+  /*
+  int i = 0;  
+  for(i;i<QUEUE_SIZE;i++){    
+    if (queue[i]!=NULL){
+          message_size=6;                  
+    }
+  }*/
+
+  char msg_with_index[3]={packetIndex, msg[0], msg[1]};//,i,queue[i][0],queue[i][1]};    
+
+  //Increment packet index
+  packetIndex++;
+
+  //Our messurment
+  printf ("Index: %3d - temp off sensor = %c%d.%04d\n", packetIndex, minus, tempint, tempfrac);
+
+  //send temp
+  packetbuf_copyfrom(msg_with_index, message_size);     
+  addr_send.u8[0] = TO_MOTE_ADDRESS;
   addr_send.u8[1] = 0;
   printf("Mesh status: %d\n", mesh_ready(&mesh));
   mesh_send(&mesh, &addr_send);
 }
 
-static void inc_address(){
+/*---------------------------------------------------------------------------*/
+/* Increase MOTE Z jedan Address */
+/*---------------------------------------------------------------------------*/
+static void increase_address(){  
   myAddress+=1;
   linkaddr_t addr;  
   addr.u8[0] = myAddress;
@@ -157,12 +178,12 @@ PROCESS_THREAD(assignment2, ev, data)
   PROCESS_EXITHANDLER(mesh_close(&mesh);)
   PROCESS_BEGIN();  
   mesh_open(&mesh, 132, &callbacks);
-  memset(queue, (int)NULL, 16 * sizeof(const char *));
+  //memset(queue, (int)NULL, QUEUE_SIZE * sizeof(const char *));
   
   SENSORS_ACTIVATE(button_sensor);
 
   // set address
-  inc_address();
+  increase_address();
 
   while(1) {    
 
@@ -171,11 +192,11 @@ PROCESS_THREAD(assignment2, ev, data)
     
     //set address
     if(ev == sensors_event && data == &button_sensor){
-      inc_address();
+      increase_address();
     }
     //sense temperature and send it
-    if(myAddress==1 && etimer_expired(&et)){
-      send_temp();
+    if(myAddress==FROM_MOTE_ADDRESS && etimer_expired(&et)){
+      send_temperature();
     }
 
   }
