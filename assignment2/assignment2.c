@@ -47,10 +47,7 @@ static void timedout(struct mesh_conn *c)
 
 }
 
-static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
-  printf("Data received from %d.%d: %d bytes\n",
-  from->u8[0], from->u8[1], packetbuf_datalen(), packetbuf_datalen());
-
+static uint8_t decode_temp(char *msg){
   // prepare variables for conversion of received temperature
   int16_t  tempint;
   uint16_t tempfrac;
@@ -60,7 +57,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   char     minus = ' ';
   uint8_t  index = 0;
   // convert received temperatura and index
-  char *rcv_data = (char *)packetbuf_dataptr();
+  char *rcv_data = msg;
   raw = ((rcv_data[1] & 0xff)<<8) + (rcv_data[2] & 0xff);
   index = rcv_data[0];
   absraw = raw;
@@ -72,6 +69,25 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
   minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
   printf ("Index: %3d - received temp = %c%d.%04d\n", index, minus, tempint, tempfrac);
+  return index;
+}
+
+static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
+  printf("Data received from %d.%d: %d bytes\n",
+  from->u8[0], from->u8[1], packetbuf_datalen(), packetbuf_datalen());
+
+  if (myAddress == 1){
+    // receive ACK and clear queue
+
+  } else if (myAddress == 3){
+    // receive data, print to STD_OUT and send ACK
+    int i;
+    for(i=0; i<packetbuf_datalen(); i+=3){
+      uint8_t index_to_confirm = decode_temp(((char *)packetbuf_dataptr()) + i);
+    }
+
+  }
+  
 
   //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
   //mesh_send(&mesh, from);
@@ -110,9 +126,11 @@ static void send_temp(){
   char msg_with_index[3]={packetIndex, msg[0], msg[1]};
   packetIndex++;
   printf ("Index: %3d - temp off sensor = %c%d.%04d\n", packetIndex, minus, tempint, tempfrac);
+  char msg_with_index_doubled[6] = {msg_with_index[2], msg_with_index[1], msg_with_index[0], msg_with_index[2], msg_with_index[1], msg_with_index[0]};
+  printf ("Sending %s\n", msg_with_index_doubled);
 
   //send temp   
-  packetbuf_copyfrom(msg_with_index, 3);
+  packetbuf_copyfrom(msg_with_index_doubled, 6);
   addr_send.u8[0] = 3;
   addr_send.u8[1] = 0;
   printf("Mesh status: %d\n", mesh_ready(&mesh));
@@ -148,7 +166,7 @@ PROCESS_THREAD(assignment2, ev, data)
 
   while(1) {    
 
-  	etimer_set(&et, TMP102_READ_INTERVAL);          // Set the timer    
+    etimer_set(&et, TMP102_READ_INTERVAL);          // Set the timer    
     PROCESS_WAIT_EVENT();
     
     //set address
