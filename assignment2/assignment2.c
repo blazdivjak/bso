@@ -24,6 +24,7 @@ static struct mesh_conn mesh;
 const char * queue[16];
 //packet queue
 static uint8_t packetIndex = 0;
+static int myAddress = 0;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(assignment2, "Assignment2 proces");
@@ -76,8 +77,10 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   //mesh_send(&mesh, from);
 }
 
+/*---------------------------------------------------------------------------*/
 // callbacks for mesh (must be declared after declaration)
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
+/*---------------------------------------------------------------------------*/
 
 static void send_temp(){
   //temperature sensing
@@ -114,7 +117,17 @@ static void send_temp(){
   addr_send.u8[1] = 0;
   printf("Mesh status: %d\n", mesh_ready(&mesh));
   mesh_send(&mesh, &addr_send);
+}
 
+static void inc_address(){
+  myAddress+=1;
+  linkaddr_t addr;  
+  addr.u8[0] = myAddress;
+  addr.u8[1] = 0;
+  printf("My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
+  uint16_t shortaddr = (addr.u8[0] << 8) + addr.u8[1];
+  cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, NULL);   
+  linkaddr_set_node_addr (&addr);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -128,13 +141,10 @@ PROCESS_THREAD(assignment2, ev, data)
   mesh_open(&mesh, 132, &callbacks);
   memset(queue, (int)NULL, 16 * sizeof(const char *));
   
-  //settings
-  static int myAddress = 1;
-  linkaddr_t addr;  
-  addr.u8[0]=myAddress;
-  addr.u8[1] = 0;
-  
   SENSORS_ACTIVATE(button_sensor);
+
+  // set address
+  inc_address();
 
   while(1) {    
 
@@ -143,15 +153,8 @@ PROCESS_THREAD(assignment2, ev, data)
     
     //set address
     if(ev == sensors_event && data == &button_sensor){
-      myAddress+=1;
-      addr.u8[0] = myAddress;
-      addr.u8[1] = 0;
-      printf("My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
-      uint16_t shortaddr = (addr.u8[0] << 8) + addr.u8[1];
-      cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, NULL);		
-      linkaddr_set_node_addr (&addr);
+      inc_address();
     }
-
     //sense temperature and send it
     if(myAddress==1 && etimer_expired(&et)){
       send_temp();
