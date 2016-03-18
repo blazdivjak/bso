@@ -71,7 +71,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   tempint  = (absraw >> 8) * sign;
   tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
   minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
-  printf ("Index: %2d - received temp = %c%d.%04d\n", index, minus, tempint, tempfrac);
+  printf ("Index: %3d - received temp = %c%d.%04d\n", index, minus, tempint, tempfrac);
 
   //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
   //mesh_send(&mesh, from);
@@ -103,13 +103,13 @@ static void send_temp(){
   tempint  = (absraw >> 8) * sign;
   tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
   minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
-  printf ("Temp off sensor = %c%d.%04d\n", minus, tempint, tempfrac);
 
   // Assable the message
   char msg[2] = {((raw & 0xff00)>>8), (raw&0xff)};
   queue[packetIndex]=msg;      
   char msg_with_index[3]={packetIndex, msg[0], msg[1]};
   packetIndex++;
+  printf ("Index: %3d - temp off sensor = %c%d.%04d\n", packetIndex, minus, tempint, tempfrac);
 
   //send temp   
   packetbuf_copyfrom(msg_with_index, 3);
