@@ -20,13 +20,16 @@
 #define MESSAGE "Hello"
 
 /*Static values*/
-
 static struct mesh_conn mesh;
 const char * queue[16];
+//packet queue
+static uint8_t packetIndex = 0;
+
 /*---------------------------------------------------------------------------*/
 PROCESS(assignment2, "Assignment2 proces");
 AUTOSTART_PROCESSES(&assignment2);
 /*---------------------------------------------------------------------------*/
+
 static void sent(struct mesh_conn *c)
 {
   printf("packet sent\n");
@@ -73,7 +76,47 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   //mesh_send(&mesh, from);
 }
 
+// callbacks for mesh (must be declared after declaration)
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
+
+static void send_temp(){
+  //temperature sensing
+  int16_t  tempint;
+  uint16_t tempfrac;
+  int16_t  raw;
+  uint16_t absraw;
+  int16_t  sign = 1;
+  char     minus = ' ';
+  linkaddr_t addr_send; 
+  tmp102_init();
+  
+  // Reading from the sensor
+  raw = tmp102_read_temp_raw();
+  absraw = raw;
+  if (raw < 0) { // Perform 2C's if sensor returned negative data
+    absraw = (raw ^ 0xFFFF) + 1;
+    sign = -1;
+  }
+  tempint  = (absraw >> 8) * sign;
+  tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
+  minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
+  printf ("Temp off sensor = %c%d.%04d\n", minus, tempint, tempfrac);
+
+  // Assable the message
+  char msg[2] = {((raw & 0xff00)>>8), (raw&0xff)};
+  queue[packetIndex]=msg;      
+  char msg_with_index[3]={packetIndex, msg[0], msg[1]};
+  packetIndex++;
+
+  //send temp   
+  packetbuf_copyfrom(msg_with_index, 3);
+  addr_send.u8[0] = 3;
+  addr_send.u8[1] = 0;
+  printf("Mesh status: %d\n", mesh_ready(&mesh));
+  mesh_send(&mesh, &addr_send);
+
+}
+
 /*---------------------------------------------------------------------------*/
 /* Set my Address and sense temperature */
 /*---------------------------------------------------------------------------*/
@@ -90,19 +133,6 @@ PROCESS_THREAD(assignment2, ev, data)
   linkaddr_t addr;  
   addr.u8[0]=myAddress;
   addr.u8[1] = 0;
-
-  //packet queue
-  static uint8_t packetCount = 0;
-
-  //temperature sensing
-  int16_t  tempint;
-  uint16_t tempfrac;
-  int16_t  raw;
-  uint16_t absraw;
-  int16_t  sign;
-  char     minus = ' ';
-  linkaddr_t addr_send; 
-  tmp102_init();
   
   SENSORS_ACTIVATE(button_sensor);
 
@@ -124,32 +154,7 @@ PROCESS_THREAD(assignment2, ev, data)
 
     //sense temperature and send it
     if(myAddress==1 && etimer_expired(&et)){
-  
-      sign = 1;
-
-      raw = tmp102_read_temp_raw();  // Reading from the sensor
-
-      absraw = raw;
-      if (raw < 0) { // Perform 2C's if sensor returned negative data
-        absraw = (raw ^ 0xFFFF) + 1;
-        sign = -1;
-      }
-      tempint  = (absraw >> 8) * sign;
-      tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
-      minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
-      printf ("Temp off sensor = %c%d.%04d\n", minus, tempint, tempfrac);
-
-      char msg[2] = {((raw & 0xff00)>>8), (raw&0xff)};
-      queue[packetCount]=msg;      
-      char msg_with_index[3]={packetCount, msg[0], msg[1]};
-      packetCount++;
-      //send temp   
-      packetbuf_copyfrom(msg_with_index, 3);
-      //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
-      addr_send.u8[0] = 3;
-      addr_send.u8[1] = 0;
-      printf("Mesh status: %d\n", mesh_ready(&mesh));
-      mesh_send(&mesh, &addr_send);
+      send_temp();
     }
 
   }
