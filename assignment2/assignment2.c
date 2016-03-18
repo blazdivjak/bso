@@ -22,9 +22,18 @@
 #define MESSAGE "Hello"
 #define QUEUE_SIZE 256
 
+
+/*
+Message structure
+*/
+struct message{
+    char id;
+    char message;
+};
+
 /*Static values*/
 static struct mesh_conn mesh;
-//const char * queue[QUEUE_SIZE];
+struct message message_queue[QUEUE_SIZE];
 //packet queue
 static uint8_t packetIndex = 0;
 static int myAddress = 0;
@@ -126,20 +135,26 @@ static void send_temperature(){
   minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
 
   //Save message to queue
-  char msg[2] = {((raw & 0xff00)>>8), (raw&0xff)};
-  //queue[packetIndex]=sprintf(msg,"%s");
+  char msg[2] = {((raw & 0xff00)>>8), (raw&0xff)};  
+  struct message m;
+  m.id=packetIndex;
+  m.message=msg;
+  message_queue[packetIndex]=m;
   int8_t message_size = 3;
 
-  //Create message and piggy back unsent messages  
-  /*
-  int i = 0;  
-  for(i;i<QUEUE_SIZE;i++){    
-    if (queue[i]!=NULL){
-          message_size=6;                  
-    }
-  }*/
+  char msg_with_index[6]={packetIndex, msg[0], msg[1],0,0,0};//,i,queue[i][0],queue[i][1]};    
 
-  char msg_with_index[3]={packetIndex, msg[0], msg[1]};//,i,queue[i][0],queue[i][1]};    
+  //Create message and piggy back unsent messages
+  int i = 0;
+  
+  for(i;i<QUEUE_SIZE;i++){
+    if (message_queue[i].message!=NULL){
+          message_size=6;
+          msg_with_index[3]=message_queue[i].id;
+          msg_with_index[4]=message_queue[i].message[0];
+          msg_with_index[5]=message_queue[i].message[1];
+    }
+  }
 
   //Increment packet index
   packetIndex++;
@@ -177,8 +192,7 @@ PROCESS_THREAD(assignment2, ev, data)
 {  
   PROCESS_EXITHANDLER(mesh_close(&mesh);)
   PROCESS_BEGIN();  
-  mesh_open(&mesh, 132, &callbacks);
-  //memset(queue, (int)NULL, QUEUE_SIZE * sizeof(const char *));
+  mesh_open(&mesh, 132, &callbacks);  
   
   SENSORS_ACTIVATE(button_sensor);
 
