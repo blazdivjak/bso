@@ -43,22 +43,22 @@ static void timedout(struct mesh_conn *c)
 
 }
 
-static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops)
-{
-  printf("Data received from %d.%d: %.*s (%d)\n",
-	 from->u8[0], from->u8[1],
-	 packetbuf_datalen(), (char *)packetbuf_dataptr(), packetbuf_datalen());
+static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
+  printf("Data received from %d.%d: %d bytes\n",
+  from->u8[0], from->u8[1], packetbuf_datalen(), packetbuf_datalen());
 
+  // prepare variables for conversion of received temperature
   int16_t  tempint;
   uint16_t tempfrac;
   int16_t  raw;
   uint16_t absraw;
   int16_t  sign = 1;
   char     minus = ' ';
-
+  uint8_t  index = 0;
+  // convert received temperatura and index
   char *rcv_data = (char *)packetbuf_dataptr();
-  raw = ((rcv_data[0] & 0xff)<<8) + (rcv_data[1] & 0xff);
-
+  raw = ((rcv_data[1] & 0xff)<<8) + (rcv_data[2] & 0xff);
+  index = rcv_data[0];
   absraw = raw;
   if (raw < 0) { // Perform 2C's if sensor returned negative data
     absraw = (raw ^ 0xFFFF) + 1;
@@ -67,7 +67,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops)
   tempint  = (absraw >> 8) * sign;
   tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
   minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
-  printf ("Received temp = %c%d.%04d\n", minus, tempint, tempfrac);
+  printf ("Index: %2d - received temp = %c%d.%04d\n", index, minus, tempint, tempfrac);
 
   //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
   //mesh_send(&mesh, from);
