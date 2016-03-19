@@ -8,6 +8,7 @@
 #include "dev/button-sensor.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "net/rime/rime.h"
 #include "net/rime/mesh.h"
 #include "dev/i2cmaster.h"  // Include IC driver
@@ -20,34 +21,74 @@
 #define FROM_MOTE_ADDRESS 1
 #define TO_MOTE_ADDRESS 3
 #define MESSAGE "Hello"
-#define QUEUE_SIZE 256
+#define MAX_QUEUE_SIZE 255
 
 
 /*
 Message structure
 */
 struct message{
-    char id;
-    char message;
+    uint8_t id;
+    char message[2];
 };
 
 /*Static values*/
 static struct mesh_conn mesh;
-struct message message_queue[QUEUE_SIZE];
+// Circular queue
+static struct message message_queue[256];  
+static uint8_t queue_first = 0; // index of first object put in queue
+static uint8_t queue_last = 0;  // index of last object put in queue
+static uint8_t queue_length = 0;
 //packet queue
 static uint8_t packetIndex = 0;
 static int myAddress = 0;
+static uint8_t message_size = 0;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(assignment2, "Assignment2 proces");
 AUTOSTART_PROCESSES(&assignment2);
 /*---------------------------------------------------------------------------*/
 
+void queue_add(struct message msg) {
+  queue_last++;
+  queue_length++;
+  message_queue[queue_last] = msg;
+  if (queue_first == queue_last || queue_length > MAX_QUEUE_SIZE) { // if we come around or queue size is too big
+    queue_first++;
+    queue_length--;
+  }
+  printf("Added to Q: id=%d, msg=0x%x; First: %d, Last: %d, Length: %d\n", msg.id, ((msg.message[0] & 0xff)<<8) + (msg.message[1] & 0xff), queue_first, queue_last, queue_length);
+}
+
+void queue_remove_first(uint8_t num) {
+  if (num > queue_length) {
+    queue_first = queue_last;
+    queue_length = 0;
+  } else {
+    queue_first+=num;
+    queue_length-=num;
+  }
+  printf("Removed from Q, First: %d, Last: %d, Length: %d\n", queue_first, queue_last, queue_length);
+}
+
+void queue_get_first(uint8_t num, struct message* messages) { // does NOT remove them from queue
+  if (num > queue_length) {
+    num = queue_length;
+  }
+
+  int i;
+  for (i=0; i<num; i++) {
+    struct message msg = message_queue[queue_first+i+1];
+    messages[i]= msg;
+    printf("Get from Q: loc=%d id=%d\n", queue_first+i+1, msg.id);
+  }
+}
+
 static void sent(struct mesh_conn *c)
 {
   printf("packet sent\n");
 
-  //remove buffered value
+  queue_remove_first(message_size);
 
 }
 
@@ -86,7 +127,7 @@ static uint8_t decode_temp(char *msg){
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   printf("Data received from %d.%d: %d bytes\n",
-  from->u8[0], from->u8[1], packetbuf_datalen(), packetbuf_datalen());
+  from->u8[0], from->u8[1], packetbuf_datalen());
 
   if (myAddress == FROM_MOTE_ADDRESS){
     // receive ACK and clear queue
@@ -103,6 +144,8 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
   //mesh_send(&mesh, from);
 }
+
+
 
 /*---------------------------------------------------------------------------*/
 // callbacks for mesh (must be declared after declaration)
@@ -134,33 +177,31 @@ static void send_temperature(){
   tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
   minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
 
+  printf ("Index: %3d - temp off sensor = %c%d.%04d\n", packetIndex, minus, tempint, tempfrac);
+
+
+
   //Save message to queue
   char msg[2] = {((raw & 0xff00)>>8), (raw&0xff)};  
   struct message m;
   m.id=packetIndex;
-  m.message=msg;
-  message_queue[packetIndex]=m;
-  int8_t message_size = 3;
+  m.message[0]=msg[0];
+  m.message[1]=msg[1];
 
-  char msg_with_index[6]={packetIndex, msg[0], msg[1],0,0,0};//,i,queue[i][0],queue[i][1]};    
+  queue_add(m);
 
-  //Create message and piggy back unsent messages
-  int i = 0;
-  
-  for(i;i<QUEUE_SIZE;i++){
-    if (message_queue[i].message!=NULL){
-          message_size=6;
-          msg_with_index[3]=message_queue[i].id;
-          msg_with_index[4]=message_queue[i].message[0];
-          msg_with_index[5]=message_queue[i].message[1];
-    }
+  message_size = 3*queue_length;
+
+  struct message messages[queue_length];
+  queue_get_first(queue_length, messages);
+
+  char msg_with_index[message_size];
+  int i;
+  for (i=0; i<message_size; i+=3) {
+    msg_with_index[i]=messages[i].id;
+    msg_with_index[i+1]=messages[i].message[0];
+    msg_with_index[i+2]=messages[i].message[1];
   }
-
-  //Increment packet index
-  packetIndex++;
-
-  //Our messurment
-  printf ("Index: %3d - temp off sensor = %c%d.%04d\n", packetIndex, minus, tempint, tempfrac);
 
   //send temp
   packetbuf_copyfrom(msg_with_index, message_size);     
@@ -168,6 +209,9 @@ static void send_temperature(){
   addr_send.u8[1] = 0;
   printf("Mesh status: %d\n", mesh_ready(&mesh));
   mesh_send(&mesh, &addr_send);
+
+  //Increment packet index
+  packetIndex++;
 }
 
 /*---------------------------------------------------------------------------*/
