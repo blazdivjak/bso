@@ -146,8 +146,6 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   }  
 }
 
-
-
 /*---------------------------------------------------------------------------*/
 // callbacks for mesh (must be declared after declaration)
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
@@ -180,8 +178,6 @@ static void send_temperature(){
 
   printf ("Index: %3d - temp off sensor = %c%d.%04d\n", packetIndex, minus, tempint, tempfrac);
 
-
-
   //Save message to queue
   char msg[2] = {((raw & 0xff00)>>8), (raw&0xff)};  
   struct message m;
@@ -206,6 +202,7 @@ static void send_temperature(){
 
   //send temp
   packetbuf_copyfrom(msg_with_index, message_size);     
+  printf("Messages size: %d bytes\n", message_size);
   addr_send.u8[0] = TO_MOTE_ADDRESS;
   addr_send.u8[1] = 0;
   printf("Mesh status: %d\n", mesh_ready(&mesh));
