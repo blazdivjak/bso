@@ -69,7 +69,7 @@ void queue_add(struct message msg) {
     queue_first++;
     queue_length--;
   }
-  printf("Added to Q: id=%d, msg=0x%x; First: %d, Last: %d, Length: %d\n", msg.id, ((msg.message[0] & 0xff)<<8) + (msg.message[1] & 0xff), queue_first, queue_last, queue_length);
+  //printf("Added to Q: id=%d, msg=0x%x; First: %d, Last: %d, Length: %d\n", msg.id, ((msg.message[0] & 0xff)<<8) + (msg.message[1] & 0xff), queue_first, queue_last, queue_length);
 }
 
 void queue_remove_first(uint8_t num) {
@@ -80,7 +80,7 @@ void queue_remove_first(uint8_t num) {
     queue_first+=num;
     queue_length-=num;
   }
-  printf("Removed from Q, First: %d, Last: %d, Length: %d\n", queue_first, queue_last, queue_length);
+  //printf("Removed from Q, First: %d, Last: %d, Length: %d\n", queue_first, queue_last, queue_length);
 }
 
 void queue_get_first(uint8_t num, struct message* messages) { // does NOT remove them from queue
@@ -92,7 +92,7 @@ void queue_get_first(uint8_t num, struct message* messages) { // does NOT remove
   for (i=0; i<num; i++) {
     struct message msg = message_queue[queue_first+i+1];
     messages[i]= msg;
-    printf("Get from Q: loc=%d id=%d\n", queue_first+i+1, msg.id);
+    //printf("Get from Q: loc=%d id=%d\n", queue_first+i+1, msg.id);
   }
 }
 /*
@@ -215,10 +215,10 @@ static void send_temperature(){
 
   //send temp
   packetbuf_copyfrom(msg_with_index, message_size);     
-  printf("Messages size: %d bytes\n", message_size);
+  //printf("Messages size we will send: %d bytes\n", message_size);
   addr_send.u8[0] = TO_MOTE_ADDRESS;
   addr_send.u8[1] = 0;
-  printf("Mesh status: %d\n", mesh_ready(&mesh));
+  //printf("Mesh status: %d\n", mesh_ready(&mesh));
   mesh_send(&mesh, &addr_send);
 
   //Increment packet index
