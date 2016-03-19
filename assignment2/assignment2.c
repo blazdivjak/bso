@@ -139,8 +139,7 @@ static void timedout(struct mesh_conn *c)
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
-  printf("Data received from %d.%d: %d bytes\n",
-  from->u8[0], from->u8[1], packetbuf_datalen());
+  //printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
 
   if (myAddress == FROM_MOTE_ADDRESS){    
     // receive ACK and clear queue
@@ -215,7 +214,7 @@ static void send_temperature(){
 
   //send temp
   packetbuf_copyfrom(msg_with_index, message_size);     
-  //printf("Messages size we will send: %d bytes\n", message_size);
+  printf("Messages size we will send: %d bytes\n", message_size);
   addr_send.u8[0] = TO_MOTE_ADDRESS;
   addr_send.u8[1] = 0;
   //printf("Mesh status: %d\n", mesh_ready(&mesh));
