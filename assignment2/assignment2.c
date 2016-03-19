@@ -1,5 +1,5 @@
 /*
-*__author: blaz__
+*__author: blaz, gregor, gasper__
 *__date: 2016-03-14__
 *__assigment2__
 */
@@ -23,7 +23,6 @@
 #define MESSAGE "Hello"
 #define MAX_QUEUE_SIZE 255
 
-
 /*
 Message structure
 */
@@ -31,15 +30,21 @@ struct message{
     uint8_t id;
     char message[2];
 };
-
-/*Static values*/
+/*
+Static values
+*/
 static struct mesh_conn mesh;
-// Circular queue
+
+/*
+Circular queue for buffered packets
+*/
 static struct message message_queue[256];  
 static uint8_t queue_first = 0; // index of first object put in queue
 static uint8_t queue_last = 0;  // index of last object put in queue
 static uint8_t queue_length = 0;
-//packet queue
+/*
+Packet numbers and size of messages we are sending
+*/
 static uint8_t packetIndex = 0;
 static int myAddress = 0;
 static uint8_t message_size = 0;
@@ -48,6 +53,13 @@ static uint8_t message_size = 0;
 PROCESS(assignment2, "Assignment2 proces");
 AUTOSTART_PROCESSES(&assignment2);
 /*---------------------------------------------------------------------------*/
+
+/*
+* Queue functions
+* - queue_add() add one message to queue if it was not confirmed
+* - queue_remove_first() remove number of elements we sent and were confirmed
+* - queue_get_first() get all elements currently in queue for piggybacking in the next packet
+*/
 
 void queue_add(struct message msg) {
   queue_last++;
@@ -83,21 +95,9 @@ void queue_get_first(uint8_t num, struct message* messages) { // does NOT remove
     printf("Get from Q: loc=%d id=%d\n", queue_first+i+1, msg.id);
   }
 }
-
-static void sent(struct mesh_conn *c)
-{
-  printf("packet sent\n");
-
-}
-
-static void timedout(struct mesh_conn *c)
-{
-  printf("packet timedout\n");
-  //printf("queue length: %d",  packetqueue_len(&queue));
-  //add value to buffer and try to send it next time
-
-}
-
+/*
+* Decoder for received messages decodes one temeprature message (3bytes)
+*/
 static uint8_t decode_temp(char *msg){
   // prepare variables for conversion of received temperature
   int16_t  tempint;
@@ -123,6 +123,21 @@ static uint8_t decode_temp(char *msg){
   return index;
 }
 
+/*
+* Send and receive functions
+* - mote 1.0 sends temperatures and if it receives ack it removes number of sent temperatures from queue
+* - mote 3.0 receives temperature and uses decode_temp() to display it. Than it sends confirmation message.
+*/
+static void sent(struct mesh_conn *c)
+{
+  printf("packet sent\n");
+}
+
+static void timedout(struct mesh_conn *c)
+{
+  printf("packet timedout\n");
+}
+
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   printf("Data received from %d.%d: %d bytes\n",
   from->u8[0], from->u8[1], packetbuf_datalen());
@@ -132,14 +147,13 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
     queue_remove_first(message_size/3);
 
   } else if (myAddress == TO_MOTE_ADDRESS){
-    // receive data, print to STD_OUT and send ACK
+    // receive data, print to STD_OUT
     uint8_t index_to_confirm;
     int i;
     for(i=0; i<packetbuf_datalen(); i+=3){
       index_to_confirm = decode_temp(((char *)packetbuf_dataptr()) + i);
     }
-
-    //confirm message
+    //confirm message a.k.a send ACK
     packetbuf_copyfrom(index_to_confirm, 1);
     mesh_send(&mesh, from);
   }  
@@ -194,9 +208,9 @@ static void send_temperature(){
   char msg_with_index[message_size];
   int i;
   for (i=0; i<message_size; i+=3) {
-    msg_with_index[i]=messages[i].id;
-    msg_with_index[i+1]=messages[i].message[0];
-    msg_with_index[i+2]=messages[i].message[1];
+    msg_with_index[i]=messages[i/3].id;
+    msg_with_index[i+1]=messages[i/3].message[0];
+    msg_with_index[i+2]=messages[i/3].message[1];
   }
 
   //send temp
@@ -212,7 +226,7 @@ static void send_temperature(){
 }
 
 /*---------------------------------------------------------------------------*/
-/* Increase MOTE Z jedan Address */
+/* Increase MOTE Z-jedan Address */
 /*---------------------------------------------------------------------------*/
 static void increase_address(){  
   myAddress+=1;
