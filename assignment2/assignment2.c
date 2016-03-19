@@ -88,8 +88,6 @@ static void sent(struct mesh_conn *c)
 {
   printf("packet sent\n");
 
-  queue_remove_first(message_size/3);
-
 }
 
 static void timedout(struct mesh_conn *c)
@@ -129,20 +127,23 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   printf("Data received from %d.%d: %d bytes\n",
   from->u8[0], from->u8[1], packetbuf_datalen());
 
-  if (myAddress == FROM_MOTE_ADDRESS){
+  if (myAddress == FROM_MOTE_ADDRESS){    
     // receive ACK and clear queue
+    queue_remove_first(message_size/3);
 
   } else if (myAddress == TO_MOTE_ADDRESS){
     // receive data, print to STD_OUT and send ACK
     int i;
     for(i=0; i<packetbuf_datalen(); i+=3){
       uint8_t index_to_confirm = decode_temp(((char *)packetbuf_dataptr()) + i);
+
+      //confirm message
+      packetbuf_copyfrom(index_to_confirm, 1);
+      mesh_send(&mesh, from);      
+
     }
 
-  }
-  
-  //packetbuf_copyfrom(MESSAGE, strlen(MESSAGE));
-  //mesh_send(&mesh, from);
+  }  
 }
 
 
