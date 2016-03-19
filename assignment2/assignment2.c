@@ -214,7 +214,7 @@ static void send_temperature(){
 
   //send temp
   packetbuf_copyfrom(msg_with_index, message_size);     
-  printf("Messages size we will send: %d bytes\n", message_size);
+  //printf("Messages size we will send: %d bytes\n", message_size);
   addr_send.u8[0] = TO_MOTE_ADDRESS;
   addr_send.u8[1] = 0;
   //printf("Mesh status: %d\n", mesh_ready(&mesh));
