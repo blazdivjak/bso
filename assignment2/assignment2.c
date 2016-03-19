@@ -88,7 +88,7 @@ static void sent(struct mesh_conn *c)
 {
   printf("packet sent\n");
 
-  queue_remove_first(message_size);
+  queue_remove_first(message_size/3);
 
 }
 
