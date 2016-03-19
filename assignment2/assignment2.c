@@ -133,16 +133,15 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
 
   } else if (myAddress == TO_MOTE_ADDRESS){
     // receive data, print to STD_OUT and send ACK
+    uint8_t index_to_confirm;
     int i;
     for(i=0; i<packetbuf_datalen(); i+=3){
-      uint8_t index_to_confirm = decode_temp(((char *)packetbuf_dataptr()) + i);
-
-      //confirm message
-      packetbuf_copyfrom(index_to_confirm, 1);
-      mesh_send(&mesh, from);      
-
+      index_to_confirm = decode_temp(((char *)packetbuf_dataptr()) + i);
     }
 
+    //confirm message
+    packetbuf_copyfrom(index_to_confirm, 1);
+    mesh_send(&mesh, from);
   }  
 }
 
@@ -217,6 +216,7 @@ static void send_temperature(){
 /*---------------------------------------------------------------------------*/
 static void increase_address(){  
   myAddress+=1;
+  myAddress=myAddress%5;
   linkaddr_t addr;  
   addr.u8[0] = myAddress;
   addr.u8[1] = 0;
