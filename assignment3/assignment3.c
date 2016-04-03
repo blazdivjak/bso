@@ -13,6 +13,7 @@
 #include "net/rime/mesh.h"
 #include "dev/i2cmaster.h"  // Include IC driver
 #include "dev/tmp102.h"     // Include sensor driver
+#include "sys/node-id.h" 
 #define TMP102_READ_INTERVAL (CLOCK_SECOND/4)  // Poll the sensor every 500 ms
 
 /*
@@ -253,6 +254,7 @@ PROCESS_THREAD(assignment3, ev, data)
 
   // set address
   //increase_address();
+  myAddress = node_id;
 
   while(1) {    
 
