@@ -13,13 +13,13 @@
 #include "net/rime/mesh.h"
 #include "dev/i2cmaster.h"  // Include IC driver
 #include "dev/tmp102.h"     // Include sensor driver
-#define TMP102_READ_INTERVAL (CLOCK_SECOND)  // Poll the sensor every 500 ms
+#define TMP102_READ_INTERVAL (CLOCK_SECOND/4)  // Poll the sensor every 500 ms
 
 /*
 * Our assignment3 process
 */
 #define FROM_MOTE_ADDRESS 1
-#define TO_MOTE_ADDRESS 3
+#define TO_MOTE_ADDRESS 10
 #define MESSAGE "Hello"
 #define MAX_QUEUE_SIZE 255
 
@@ -252,7 +252,7 @@ PROCESS_THREAD(assignment3, ev, data)
   SENSORS_ACTIVATE(button_sensor);
 
   // set address
-  increase_address();
+  //increase_address();
 
   while(1) {    
 

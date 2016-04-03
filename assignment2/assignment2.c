@@ -247,7 +247,7 @@ PROCESS_THREAD(assignment2, ev, data)
 {  
   PROCESS_EXITHANDLER(mesh_close(&mesh);)
   PROCESS_BEGIN();  
-  mesh_open(&mesh, 132, &callbacks);  
+  mesh_open(&mesh, 14, &callbacks);  
   
   SENSORS_ACTIVATE(button_sensor);
 

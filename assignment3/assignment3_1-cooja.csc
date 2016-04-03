@@ -12,10 +12,10 @@
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       org.contikios.cooja.radiomediums.UDGM
-      <transmitting_range>50.0</transmitting_range>
-      <interference_range>50.0</interference_range>
+      <transmitting_range>38.0</transmitting_range>
+      <interference_range>38.0</interference_range>
       <success_ratio_tx>1.0</success_ratio_tx>
-      <success_ratio_rx>1.0</success_ratio_rx>
+      <success_ratio_rx>0.95</success_ratio_rx>
     </radiomedium>
     <events>
       <logoutput>40000</logoutput>
@@ -44,8 +44,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>95.89331186402022</x>
-        <y>104.18270127642216</y>
+        <x>50.726345869456885</x>
+        <y>32.00651661954208</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -226,8 +226,8 @@
     <width>280</width>
     <z>3</z>
     <height>160</height>
-    <location_x>400</location_x>
-    <location_y>0</location_y>
+    <location_x>765</location_x>
+    <location_y>6</location_y>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.Visualizer
@@ -236,11 +236,12 @@
       <skin>org.contikios.cooja.plugins.skins.IDVisualizerSkin</skin>
       <skin>org.contikios.cooja.plugins.skins.UDGMVisualizerSkin</skin>
       <skin>org.contikios.cooja.plugins.skins.GridVisualizerSkin</skin>
-      <viewport>3.307326632604003 0.0 0.0 3.307326632604003 31.63366836979985 -10.366331630200138</viewport>
+      <skin>org.contikios.cooja.plugins.skins.TrafficVisualizerSkin</skin>
+      <viewport>5.706572253365867 0.0 0.0 5.706572253365867 44.76322107335849 12.671387331706635</viewport>
     </plugin_config>
-    <width>400</width>
-    <z>1</z>
-    <height>400</height>
+    <width>755</width>
+    <z>0</z>
+    <height>651</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
   </plugin>
@@ -252,46 +253,82 @@
       <coloring />
     </plugin_config>
     <width>554</width>
-    <z>2</z>
+    <z>1</z>
     <height>491</height>
-    <location_x>400</location_x>
-    <location_y>160</location_y>
-  </plugin>
-  <plugin>
-    org.contikios.cooja.plugins.TimeLine
-    <plugin_config>
-      <mote>0</mote>
-      <mote>1</mote>
-      <mote>2</mote>
-      <mote>3</mote>
-      <mote>4</mote>
-      <mote>5</mote>
-      <mote>6</mote>
-      <mote>7</mote>
-      <mote>8</mote>
-      <mote>9</mote>
-      <showRadioRXTX />
-      <showRadioHW />
-      <showLEDs />
-      <zoomfactor>500.0</zoomfactor>
-    </plugin_config>
-    <width>954</width>
-    <z>5</z>
-    <height>166</height>
-    <location_x>0</location_x>
-    <location_y>651</location_y>
+    <location_x>20</location_x>
+    <location_y>564</location_y>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.Notes
     <plugin_config>
-      <notes>Enter notes here</notes>
+      <notes>Mote 1 sends packets to mote 10 
+every second. We observe average
+number of hops and dumber of lost
+packets.
+
+Motes 1 - 10 are in mash mode.</notes>
       <decorations>true</decorations>
     </plugin_config>
     <width>274</width>
+    <z>2</z>
+    <height>661</height>
+    <location_x>482</location_x>
+    <location_y>503</location_y>
+  </plugin>
+  <plugin>
+    org.contikios.cooja.plugins.ScriptRunner
+    <plugin_config>
+      <script>/*
+ *  Count number of lost packets and average number of hops
+ */
+
+// Variables
+num_hops = 0;
+num_sent_packets = 0;
+num_received_packets = 0;
+
+/* Make test automatically fail (timeout) after 100 simulated seconds 
+ * After timeout print stats */
+TIMEOUT(101000);
+GENERATE_MSG(100000, "finish");
+
+log.log("Mote 1 is sending traffic to Mote 10. \n");
+log.log("This test will run for 100 seconds. \n");
+log.log("Recording number of hops and lost packets. \n");
+
+while(1){
+    YIELD();
+    if (id == 1) {
+        if (msg.startsWith("Sending packet: ")) {
+            num_sent_packets += 1;
+        }
+        if (msg.startsWith("Conformation for ")) {
+        }
+    }
+    if (id == 10) {
+        if (msg.startsWith("Hops=")) {
+            t = msg.split("=");
+            num_hops += parseInt(t[1]);
+            num_received_packets += 1;
+        }
+        if (msg.startsWith("Received message ID: ")) {
+            //num_received_packets += 1;
+        }
+    }
+    if (msg.equals("finish")) {
+        log.log("Number of sent packtes: " + num_sent_packets + "\n");
+        log.log("Average number of hops: " + (num_hops / num_received_packets) + "\n");
+        log.log("Number of lost packets: " + (num_sent_packets - num_received_packets) + "\n");
+        log.testOK();
+    }
+}</script>
+      <active>true</active>
+    </plugin_config>
+    <width>883</width>
     <z>4</z>
-    <height>160</height>
-    <location_x>680</location_x>
-    <location_y>0</location_y>
+    <height>796</height>
+    <location_x>762</location_x>
+    <location_y>174</location_y>
   </plugin>
 </simconf>
 
