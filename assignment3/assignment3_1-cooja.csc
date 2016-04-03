@@ -44,8 +44,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>50.726345869456885</x>
-        <y>32.00651661954208</y>
+        <x>59.83864615958801</x>
+        <y>65.1262234432879</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -224,7 +224,7 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>3</z>
+    <z>4</z>
     <height>160</height>
     <location_x>765</location_x>
     <location_y>6</location_y>
@@ -240,7 +240,7 @@
       <viewport>5.706572253365867 0.0 0.0 5.706572253365867 44.76322107335849 12.671387331706635</viewport>
     </plugin_config>
     <width>755</width>
-    <z>0</z>
+    <z>5</z>
     <height>651</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -253,7 +253,7 @@
       <coloring />
     </plugin_config>
     <width>554</width>
-    <z>1</z>
+    <z>6</z>
     <height>491</height>
     <location_x>20</location_x>
     <location_y>564</location_y>
@@ -270,10 +270,11 @@ Motes 1 - 10 are in mash mode.</notes>
       <decorations>true</decorations>
     </plugin_config>
     <width>274</width>
-    <z>2</z>
+    <z>-1</z>
     <height>661</height>
     <location_x>482</location_x>
     <location_y>503</location_y>
+    <minimized>true</minimized>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.ScriptRunner
@@ -289,7 +290,7 @@ num_received_packets = 0;
 
 /* Make test automatically fail (timeout) after 100 simulated seconds 
  * After timeout print stats */
-TIMEOUT(101000);
+TIMEOUT(110000);
 GENERATE_MSG(100000, "finish");
 
 log.log("Mote 1 is sending traffic to Mote 10. \n");
@@ -325,7 +326,7 @@ while(1){
       <active>true</active>
     </plugin_config>
     <width>883</width>
-    <z>4</z>
+    <z>3</z>
     <height>796</height>
     <location_x>762</location_x>
     <location_y>174</location_y>

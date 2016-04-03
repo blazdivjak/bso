@@ -1,9 +1,43 @@
-Report 3
+Report Assignment 3
+Date: 3.4.2016 
+Group 3: Blaž Divjak, Gašper Kojek, Gregor Cimerman
 
-Group: Blaž Divjak, Gašper Kojek & Gregor Cimerman
+The first task was to assemble 10 motes in mash setup where mote 1 sends a packet each second to mote 10. No mater the mote positions and range the mesh setup should take care of delivering the packet to its destination. We wrote script that counts the received and transmitted packets in simulation and notes the hops. After the simulation finishes the packets are counted and numbers are logged into console. We ran the following tests, results are described in assignment 3.1 tests.
 
-Assignemt 3
+Assignment 3.1 Tests
 
-The first task was to assemble 10 motes in mash setup where mote 1 sends a packet each second to mote 10. No mater the mote positions and range the mesh setup should take care of delivering the packet to its destination. We wrote script tat counts the received and transmitted packets in simulation and notes the hops. After the simulation finishes the packets are counted and numbers are logged into console.
+Test 1
+TX Ratio: 100.0%
+RX Ratio: 95%
+Number of sent packtes: 49
+Average number of hops: 3
+Number of lost packets: 2
+
+Test 2
+TX Ratio: 100.0%
+RX Ratio: 95%
+Number of sent packtes: 49
+Average number of hops: 9
+Number of lost packets: 23
+
+Test 3
+TX Ratio: 100.0%
+RX Ratio: 50%
+Number of sent packtes: 49
+Average number of hops: 3
+Number of lost packets: 10
+
+Test 4
+TX Ratio: 100.0%
+RX Ratio: 50%
+Number of sent packtes: 49
+Average number of hops: 9
+Number of lost packets: 28
+
+Most important parameter for packet loss is number of hops and than RX ratio. 
+
+3.2 Assignment 2 modification
+
+We have changed mote address automatic configuration based on node_id. We already implemented insertion of as many mesurements as possible in one packet in assignment2. We created mesh network with 10 nodes all conected from 1-10 with its neighbor and tested it.
 
 
