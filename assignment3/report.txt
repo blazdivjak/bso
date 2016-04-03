@@ -1,0 +1,9 @@
+Report 3
+
+Group: Blaž Divjak, Gašper Kojek & Gregor Cimerman
+
+Assignemt 3
+
+The first task was to assemble 10 motes in mash setup where mote 1 sends a packet each second to mote 10. No mater the mote positions and range the mesh setup should take care of delivering the packet to its destination. We wrote script tat counts the received and transmitted packets in simulation and notes the hops. After the simulation finishes the packets are counted and numbers are logged into console.
+
+
