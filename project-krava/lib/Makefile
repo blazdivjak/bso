@@ -6,20 +6,26 @@ LDFLAGS=
 SOURCES = $(wildcard *.c)
 OBJECTS=$(SOURCES:.c=.o)
 LIB_A=$(SOURCES:.c=.a)
+MKDIR_P=mkdir -p
 OBJ_DIR=obj
 A_DIR=a
 
 
-all: prepare $(SOURCES) $(LIB_A)
+all: directories $(OBJECTS) $(LIB_A)
 
-%.o : %.c
-	$(CC) -mmcu=%(MMCU) -c $(OBJ_DIR)/$@
+%.o: %.c
+	$(CC) -mmcu=$(MMCU) -c $< -o $(OBJ_DIR)/$@ 
 
-%.a : %.o
+%.a: %.o
 	$(AR) -cvq $(A_DIR)/$@ $(OBJ_DIR)/$<
 
-prepare:
-	$(MAKE) -C $(OBJ_DIR) $(A_DIR)
+directories: $(OBJ_DIR) $(A_DIR)
+	
+$(OBJ_DIR):
+	$(MKDIR_P) $(OBJ_DIR)
+
+$(A_DIR):
+	$(MKDIR_P) $(A_DIR)
 
 clean:
 	-rm $(OBJ_DIR)/* $(A_DIR)/*
