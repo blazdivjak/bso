@@ -15,14 +15,13 @@ static int16_t readTemperature(){
   uint16_t absraw;
   int16_t  sign = 1;
   char     minus = ' ';
-  linkaddr_t addr_send; 
   tmp102_init();
   
   raw = tmp102_read_temp_raw();
   return raw;
 }
 
-static float decodeTemperature(int16_t temperature){
+static float decodeTemperature(int16_t raw){
   
   /**
   * Decode raw temperature to float
@@ -30,13 +29,12 @@ static float decodeTemperature(int16_t temperature){
 
   int16_t  tempint;
   uint16_t tempfrac;
-  int16_t  raw;
   uint16_t absraw;    
   int16_t  sign = 1;
   char     minus = ' ';  
   float temperature;
   
-  absraw = temperature;
+  absraw = raw;
   if (raw < 0) { // Perform 2C's if sensor returned negative data
     absraw = (raw ^ 0xFFFF) + 1;
     sign = -1;
