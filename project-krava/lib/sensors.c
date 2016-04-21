@@ -1,3 +1,7 @@
+#ifndef __SENSORS_H__
+  #include "sensors.h"
+#endif 
+
 static int16_t readTemperature(){
   
   /**
