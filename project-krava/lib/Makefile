@@ -15,7 +15,7 @@ all: directories $(OBJECTS) $(LIB_A) rmo
 
 %.o: %.c
 	@echo [CC] $<
-	$(CC) -mmcu=$(MMCU) -c $< -o $(OBJ_DIR)/$@
+	$(CC) -mmcu=$(MMCU) -c $< -o $@
 
 %.a: %.o
 	@echo [AR] $<
@@ -26,9 +26,6 @@ directories: $(A_DIR)
 $(A_DIR):
 	$(MKDIR_P) $(A_DIR)
 
-clean:
-	-rm $(OBJ_DIR)/* $(A_DIR)/*
-
 rmo:
 	-rm *.o
 
@@ -37,3 +34,6 @@ TARGET=z1
 endif
 CONTIKI = /home/user/contiki
 include $(CONTIKI)/Makefile.include
+
+clean:
+	-rm -rf $(A_DIR)
