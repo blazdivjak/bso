@@ -11,3 +11,5 @@ all: $(CONTIKI_PROJECT1)
 
 CONTIKI = /home/user/contiki
 include $(CONTIKI)/Makefile.include
+
+TARGET_LIBFILES += -L./../lib/ -lsensors
