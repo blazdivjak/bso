@@ -11,24 +11,26 @@ OBJ_DIR=obj
 A_DIR=a
 
 
-all: directories $(OBJECTS) $(LIB_A)
+all: directories $(OBJECTS) $(LIB_A) rmo
 
 %.o: %.c
+	@echo [CC] $<
 	$(CC) -mmcu=$(MMCU) -c $< -o $(OBJ_DIR)/$@
 
 %.a: %.o
-	$(AR) -cvq $(A_DIR)/$@ $(OBJ_DIR)/$<
+	@echo [AR] $<
+	$(AR) -cvq $(A_DIR)/$@ $<
 
-directories: $(OBJ_DIR) $(A_DIR)
-	
-$(OBJ_DIR):
-	$(MKDIR_P) $(OBJ_DIR)
+directories: $(A_DIR)
 
 $(A_DIR):
 	$(MKDIR_P) $(A_DIR)
 
 clean:
 	-rm $(OBJ_DIR)/* $(A_DIR)/*
+
+rmo:
+	-rm *.o
 
 ifndef TARGET
 TARGET=z1
