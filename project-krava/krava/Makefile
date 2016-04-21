@@ -6,8 +6,6 @@ ifndef CONTIKI_PROJECT
 CONTIKI_WITH_RIME = 1
 endif
 
-CONTIKI_PROJECT = assignment3
-all: $(CONTIKI_PROJECT1)
-
 CONTIKI = /home/user/contiki
+TARGET_LIBFILES += ../lib/a/libsensors.a
 include $(CONTIKI)/Makefile.include

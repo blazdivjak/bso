@@ -8,7 +8,7 @@
 #include "dev/button-sensor.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "../lib/sensors.h"
+#include "../lib/libsensors.h"
 
 /*
 * Krava
@@ -33,8 +33,8 @@ PROCESS_THREAD(krava, ev, data)
 		etimer_set(&et, CLOCK_SECOND*1);
 		
 		if(etimer_expired(&et)){
-			temperature = readTemperature();
-			decoded_temperature = decodeTemperature(temperature);
+			// temperature = readTemperature();
+			decoded_temperature = decodeTemperature(tmp102_read_temp_raw());
 			printTemperature(decoded_temperature);
 			
 		}

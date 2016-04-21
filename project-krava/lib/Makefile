@@ -14,7 +14,7 @@ A_DIR=a
 all: directories $(OBJECTS) $(LIB_A)
 
 %.o: %.c
-	$(CC) -mmcu=$(MMCU) -c $< -o $(OBJ_DIR)/$@ 
+	$(CC) -mmcu=$(MMCU) -c $< -o $(OBJ_DIR)/$@
 
 %.a: %.o
 	$(AR) -cvq $(A_DIR)/$@ $(OBJ_DIR)/$<
@@ -29,3 +29,9 @@ $(A_DIR):
 
 clean:
 	-rm $(OBJ_DIR)/* $(A_DIR)/*
+
+ifndef TARGET
+TARGET=z1
+endif
+CONTIKI = /home/user/contiki
+include $(CONTIKI)/Makefile.include
