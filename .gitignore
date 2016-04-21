@@ -1,4 +1,3 @@
-*.h
 *.map
 *.z1
 *.a
@@ -7,3 +6,4 @@
 *.ihex
 symbols.c
 Makefile.target
+symbols.h
