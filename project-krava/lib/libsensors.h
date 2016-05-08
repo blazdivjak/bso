@@ -9,4 +9,6 @@ int16_t decodeTemperature(int16_t temperature);
 
 void printTemperature(int16_t temperature);
 
+float floor(float x);
+
 #endif

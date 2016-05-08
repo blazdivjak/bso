@@ -40,3 +40,11 @@ void printTemperature(int16_t temperature){
   printf ("Temperature = %d\n", temperature);
 
 }
+
+float floor(float x){
+  if(x >= 0.0f) {
+    return (float)((int)x);
+  } else {
+    return (float)((int)x - 1);
+  }
+}
