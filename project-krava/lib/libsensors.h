@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-float decodeTemperature(int16_t temperature);
+int16_t decodeTemperature(int16_t temperature);
 
-void printTemperature(float temperature);
+void printTemperature(int16_t temperature);
 
 #endif

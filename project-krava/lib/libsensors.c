@@ -2,18 +2,18 @@
   #include "libsensors.h"
 #endif 
 
-float decodeTemperature(int16_t raw){
+int16_t decodeTemperature(int16_t raw){
   
   /**
   * Decode raw temperature to float
   */
 
   int16_t  tempint;
-  uint16_t tempfrac;
+  // uint16_t tempfrac;
   uint16_t absraw;    
   int16_t  sign = 1;
-  char     minus = ' ';  
-  float temperature;
+  // char     minus = ' ';  
+  // float temperature;
   
   absraw = raw;
   if (raw < 0) { // Perform 2C's if sensor returned negative data
@@ -21,22 +21,22 @@ float decodeTemperature(int16_t raw){
     sign = -1;
   }
   tempint  = (absraw >> 8) * sign;
-  tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
-  minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
+  // tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
+  // minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
 
-  temperature = tempint + tempfrac/10000;
-  printf ("Temperature = %f\n", temperature);
+  // temperature = tempint + tempfrac/10000;
+  // printf ("Temperature = %d.%d\n", tempint, tempfrac);
 
-  return temperature;
+  return tempint;
 
 }
 
-void printTemperature(float temperature){
+void printTemperature(int16_t temperature){
 
   /**
   * Print raw temperature value to string
   */  
 
-  printf ("Temperature = %f\n", temperature);
+  printf ("Temperature = %d\n", temperature);
 
 }
