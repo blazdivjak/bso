@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-int sqrt(uint32_t v);
+uint32_t sqrt(uint32_t v);
 
+uint16_t int_sqrt32(uint32_t x);
 
 #endif

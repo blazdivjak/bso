@@ -1,9 +1,9 @@
 #include "libmath.h"
 
-int sqrt(uint32_t v)
+uint32_t sqrt(uint32_t v)
 {
     uint32_t t, b, r;
-    int q;
+    uint32_t q;
     r = v;           // r = v - x²
     b = 0x40000000;  // a²
     q = 0;           // 2ax
@@ -19,4 +19,22 @@ int sqrt(uint32_t v)
         b >>= 2;     // if a' = a/2, then b' = b / 4
     }
     return q;
+}
+
+uint16_t int_sqrt32(uint32_t x)
+{
+    uint16_t res=0;
+    uint16_t add= 0x8000;   
+    uint8_t i;
+    for(i=0;i<16;i++)
+    {
+        uint16_t temp=res | add;
+        uint32_t g2=temp*temp;      
+        if (x>=g2)
+        {
+            res=temp;           
+        }
+        add>>=1;
+    }
+    return res;
 }
