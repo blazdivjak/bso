@@ -204,6 +204,7 @@ PROCESS_THREAD(communication, ev, data)
 
 	etimer_set(&meshRefreshInterval, MESH_REFRESH_INTERVAL);
 	etimer_set(&sendInterval, SEND_INTERVAL);
+	printf("Starting Mesh\n");
 	mesh_open(&mesh, 14, &callbacks);
 
 	//Process main loop
@@ -215,8 +216,10 @@ PROCESS_THREAD(communication, ev, data)
 			etimer_reset(&sendInterval);
 		}
 		if(etimer_expired(&meshRefreshInterval)){
+			printf("Closing Mesh\n");
 			mesh_close(&mesh);
 			mesh_open(&mesh, 14, &callbacks);
+			printf("Initializing Mesh\n");
 			etimer_reset(&meshRefreshInterval);
 		}
 	}	
