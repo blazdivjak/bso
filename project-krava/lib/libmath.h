@@ -1,9 +1,9 @@
 #ifndef __LIBMATH_H__
 #define __LIBMATH_H__
 
-#include <stdio.h>
+#include <stdint.h>
 
-uint32_t sqrt(uint32_t v);
+int sqrt(uint32_t v);
 
 
 #endif
