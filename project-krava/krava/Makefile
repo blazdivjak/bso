@@ -10,14 +10,15 @@ ifndef PROJECT_NAME
 PROJECT_NAME = krava
 endif
 
+CONTIKI = /home/user/contiki
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
 KRAVA_LIB_DIR = ../lib
 
 all:
 	$(MAKE) clean -C $(KRAVA_LIB_DIR)
 	$(MAKE) -C $(KRAVA_LIB_DIR)
 	$(MAKE) $(PROJECT_NAME)
-
-CONTIKI = /home/user/contiki
 
 # TODO: add all needed libs as below
 TARGET_LIBFILES += ../lib/a/libsensors.a
