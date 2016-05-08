@@ -14,6 +14,7 @@
 #include "dev/adxl345.h"
 #include "../lib/libsensors.h"
 #include "../lib/libmessage.h"
+#include "../lib/libmath.h"
 
 #define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)*1
 #define RSSI_READ_INTERVAL (CLOCK_SECOND)*5

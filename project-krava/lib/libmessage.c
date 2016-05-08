@@ -1,6 +1,8 @@
-#include "libmessage.h"
+#ifndef __MESSAGE_H__
+  #include "libmessage.h"
+#endif 
 
-#define MESSAGE_MAX_SIZE=50
+#define MESSAGE_MAX_SIZE 50
 
 /*
  * Strusture for temperature, coordintate and battery measurements storage

@@ -1,6 +1,6 @@
 #include "libmath.h"
 
-int32_t sqrt(int32_t v)
+uint32_t sqrt(uint32_t v)
 {
     uint32_t t, q, b, r;
     r = v;           // r = v - x²
