@@ -21,15 +21,17 @@
 
 #define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)*1
 #define RSSI_READ_INTERVAL (CLOCK_SECOND)*5
-#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*60
+#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*10
 #define TEMP_READ_INTERVAL (CLOCK_SECOND)*30
 #define BATTERY_READ_INTERVAL (CLOCK_SECOND)*30
 #define SEND_INTERVAL (CLOCK_SECOND)*30
 
 #define GATEWAY_ADDRESS 0
-#define MY_ADDRESS 1
+#define MY_ADDRESS_1 1
+#define MY_ADDRESS_2 1
 
-static uint8_t myAddress = MY_ADDRESS;
+static uint8_t myAddress_1 = MY_ADDRESS_1;
+static uint8_t myAddress_2 = MY_ADDRESS_2;
 
 /*
 * Mesh functions
@@ -76,8 +78,8 @@ const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 */
 static void setAddress(){  
   linkaddr_t addr;  
-  addr.u8[0] = myAddress;
-  addr.u8[1] = 1;
+  addr.u8[0] = myAddress_1;
+  addr.u8[1] = myAddress_2;
   printf("My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
   uint16_t shortaddr = (addr.u8[0] << 8) + addr.u8[1];
   cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, NULL);   
@@ -202,10 +204,10 @@ PROCESS_THREAD(communication, ev, data)
 
 	etimer_set(&meshRefreshInterval, MESH_REFRESH_INTERVAL);
 	etimer_set(&sendInterval, SEND_INTERVAL);
+	mesh_open(&mesh, 14, &callbacks);
 
 	//Process main loop
 	while(1) {
-		mesh_open(&mesh, 14, &callbacks);
 	 
 		PROCESS_WAIT_EVENT();
 		if(etimer_expired(&sendInterval)){
@@ -214,6 +216,7 @@ PROCESS_THREAD(communication, ev, data)
 		}
 		if(etimer_expired(&meshRefreshInterval)){
 			mesh_close(&mesh);
+			mesh_open(&mesh, 14, &callbacks);
 			etimer_reset(&meshRefreshInterval);
 		}
 	}	
