@@ -10,11 +10,11 @@ ifndef PROJECT_NAME
 PROJECT_NAME = gateway
 endif
 
-KRAVA_LIB_DIR = ../lib
+LIB_DIR = ../lib
 
 all:
-	$(MAKE) clean -C $(KRAVA_LIB_DIR)
-	$(MAKE) -C $(KRAVA_LIB_DIR)
+	$(MAKE) clean -C $(LIB_DIR)
+	$(MAKE) -C $(LIB_DIR)
 	$(MAKE) $(PROJECT_NAME)
 
 CONTIKI = /home/user/contiki
@@ -28,13 +28,14 @@ include $(CONTIKI)/Makefile.include
 
 
 lib:
-	$(MAKE) -C $(KRAVA_LIB_DIR)
+	$(MAKE) -C $(LIB_DIR)
 
 
 upload:
-	$(MAKE) -C $(KRAVA_LIB_DIR)
+	$(MAKE) clean -C $(LIB_DIR)
+	$(MAKE) -C $(LIB_DIR)
 	$(MAKE) $(PROJECT_NAME).upload
 
 cleanall:
-	$(MAKE) clean -C $(KRAVA_LIB_DIR)
+	$(MAKE) clean -C $(LIB_DIR)
 	$(MAKE) clean
