@@ -3,12 +3,16 @@
 *__date: 2016-03-07__
 *__assigment1__
 */
+#include <stdio.h>
+#include <stdlib.h>
 #include "contiki.h"
 #include "dev/leds.h"
 #include "dev/button-sensor.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include "dev/i2cmaster.h"  // Include IC driver
+#include "dev/tmp102.h"     // Include sensor driver
 #include "../lib/libsensors.h"
+#include "../lib/libmessage.h"
+
 
 /*
 * Krava
@@ -23,6 +27,9 @@ PROCESS_THREAD(krava, ev, data)
 	static int16_t temperature;
 	static float decoded_temperature;
 	static int value = 1;
+	tmp102_init();
+
+	printf("Test0\n");
 
 	//Our process
 	PROCESS_EXITHANDLER(goto exit;)
@@ -31,8 +38,10 @@ PROCESS_THREAD(krava, ev, data)
 	while(1) {
 
 		etimer_set(&et, CLOCK_SECOND*1);
+		printf("Test1\n");
 		
 		if(etimer_expired(&et)){
+			printf("Test2\n");
 			// temperature = readTemperature();
 			decoded_temperature = decodeTemperature(tmp102_read_temp_raw());
 			printTemperature(decoded_temperature);

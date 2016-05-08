@@ -2,25 +2,6 @@
   #include "libsensors.h"
 #endif 
 
-int16_t readTemperature(){
-  
-  /**
-  * Sense temperature and return its raw value
-  */
-
-  //temperature sensing
-  int16_t  tempint;
-  uint16_t tempfrac;
-  int16_t  raw=0;
-  uint16_t absraw;
-  int16_t  sign = 1;
-  char     minus = ' ';
-  tmp102_init();
-  
-  // raw = tmp102_read_temp_raw();
-  return raw;
-}
-
 float decodeTemperature(int16_t raw){
   
   /**
