@@ -12,7 +12,6 @@ endif
 
 CONTIKI = /home/user/contiki
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
-
 KRAVA_LIB_DIR = ../lib
 
 all:

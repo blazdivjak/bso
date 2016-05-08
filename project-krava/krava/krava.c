@@ -14,7 +14,6 @@
 #include "dev/adxl345.h"
 #include "../lib/libsensors.h"
 #include "../lib/libmessage.h"
-#include "../lib/libmath.h"
 
 #define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)*1
 #define RSSI_READ_INTERVAL (CLOCK_SECOND)*5
@@ -30,7 +29,7 @@ void readBattery(){
     uint16_t bateria = battery_sensor.value(0);
     float mv = (bateria * 2.500 * 2) / 4096;
     printf("Battery: %i (%ld.%03d mV)\n", bateria, (long)mv,
-           (unsigned)((mv - floor(mv)) * 1000));
+           (unsigned)((mv - myFloor(mv)) * 1000));
 }  
 void readTemperature(){
 	
@@ -40,15 +39,13 @@ void readTemperature(){
 }
 void readMovement(){
 	
-	int16_t x, y, z;
-	uint64_t force;
+	int16_t x, y, z;	
 
 	x = adxl345.value(X_AXIS);
     y = adxl345.value(Y_AXIS);
     z = adxl345.value(Z_AXIS);
-    
-    force = x*x+y*y+z*z;
-    printf("Movement: x: %d y: %d z: %d %d\n",x, y, z, force);    
+        
+    printf("Movement: x: %d y: %d z: %d\n",x, y, z);    
 }
 void readRSSI(){
 

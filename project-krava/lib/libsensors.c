@@ -41,7 +41,7 @@ void printTemperature(int16_t temperature){
 
 }
 
-float floor(float x){
+float myFloor(float x){
   if(x >= 0.0f) {
     return (float)((int)x);
   } else {
