@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "contiki.h"
 #include "dev/serial-line.h"
+#include "dev/uart0.h"
 #include "dev/leds.h"
 #include "dev/button-sensor.h"
 #include "dev/i2cmaster.h"  // Include IC driver
@@ -39,6 +40,13 @@ static void increase_address(){
   cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, NULL);   
   linkaddr_set_node_addr (&addr);
   myAddress+=1;
+}
+
+static int uart_rx_callback(unsigned char c) {
+     uint8_t u;
+     printf("\nReceived %c",c);
+     // u = (uint8_t)c;
+     // printf("\nReceived %u",u);
 }
 
 /*
@@ -74,8 +82,10 @@ PROCESS_THREAD(gateway_main, ev, data)
   PROCESS_BEGIN();  
   // process_init();
   // serial_line_init();
-  uart0_set_input(serial_line_input_byte);
+  
   serial_line_init();
+  // uart0_init(BAUD2UBR(115200));
+  // uart0_set_input(uart_rx_callback);
 
   mesh_open(&mesh, 14, &callbacks);  
   
@@ -87,14 +97,13 @@ PROCESS_THREAD(gateway_main, ev, data)
 
   while(1) {    
 
-    // PROCESS_WAIT_EVENT(); 
-    PROCESS_YIELD();
+    PROCESS_WAIT_EVENT(); 
     //set address
     if(ev == sensors_event && data == &button_sensor){
     	printf("button\n");
       	increase_address();
     }
-    if (ev == serial_line_event_message) {
+    if (ev == serial_line_event_message && data != NULL) {
     	printf("received line: %s\n", (char *)data);
     }
 
