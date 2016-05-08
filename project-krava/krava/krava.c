@@ -1,7 +1,7 @@
 /*
-*__author: blaz__
-*__date: 2016-03-07__
-*__assigment1__
+*__authors: blaz, gregor, gasper__
+*__date: 2016-04-15__
+*__project krava__
 */
 #include <stdio.h>
 #include <stdlib.h>
