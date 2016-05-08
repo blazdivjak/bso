@@ -1,6 +1,4 @@
-#ifndef __MESSAGE_H__
-  #include "libmessage.h"
-#endif 
+#include "libmessage.h"
 
 #define MESSAGE_MAX_SIZE=50
 

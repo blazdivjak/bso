@@ -23,6 +23,7 @@ all:
 # TODO: add all needed libs as below
 TARGET_LIBFILES += ../lib/a/libsensors.a
 TARGET_LIBFILES += ../lib/a/libmessage.a
+TARGET_LIBFILES += ../lib/a/libmath.a
 
 
 include $(CONTIKI)/Makefile.include
