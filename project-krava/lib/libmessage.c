@@ -1,6 +1,8 @@
 #ifndef __MESSAGE_H__
   #include "libmessage.h"
-#endif 
+#endif
+
+#include <stdio.h>
 
 #define MESSAGE_MAX_SIZE 50
 
@@ -65,6 +67,52 @@ void addBattery (struct Message m, int battery) {
 	}
 	m.batteries[batteryC] = battery;
 	m.batteriesCount = batteryC + 1;
+}
+
+/*
+ * Encode message struct into int array to be sent
+ */
+int * encodeData(struct Message m) {
+	static int buffer[3 * MESSAGE_MAX_SIZE];
+
+	int i;
+	for (i = 0; i < m.tempsCount; i = i + 1) {
+		buffer[i] = m.temps[i];
+	}
+	for (i = 0; i < m.accelerationsCount; i = i + 1) {
+		buffer[i + m.tempsCount] = m.accelerations[i];
+	}
+	for (i = 0; i < m.batteriesCount; i = i + 1) {
+		buffer[i + m.tempsCount + m.accelerationsCount] = m.batteries[i];
+	}
+	return buffer;
+}
+
+/*
+ * Returns encoded data size (size of int array)
+ */
+int getEncodeDataSize(struct Message m) {
+	int size = m.tempsCount + m.accelerationsCount + m.batteriesCount;
+	return size;
+}
+
+/*
+ * Prints data from Message struct
+ */
+void printMessage(struct Message m) {
+	//char buffer [m.tempsCount * 1 + m.accelerationsCount * 3 + m.batteriesCount * 1];
+	//int bufferSize = 0;
+	//bufferSize = sprintf(buffer, "%d plus %d is %d", a, b, a+b);
+	printf("Message struct contains: \n %2d temperature measurements, \n %2d acceleration measurements, \n %2d battery measurements ", 
+		m.tempsCount, m.accelerationsCount, m.batteriesCount);
+}
+
+/*
+ * Decodes array of ints into Message struct
+ */
+void decode(char * message) {
+	// TODO: to be implemented
+	printf("To be implemented");
 }
 
 
