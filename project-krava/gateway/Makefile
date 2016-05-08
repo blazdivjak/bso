@@ -13,6 +13,7 @@ endif
 KRAVA_LIB_DIR = ../lib
 
 all:
+	$(MAKE) clean -C $(KRAVA_LIB_DIR)
 	$(MAKE) -C $(KRAVA_LIB_DIR)
 	$(MAKE) $(PROJECT_NAME)
 
