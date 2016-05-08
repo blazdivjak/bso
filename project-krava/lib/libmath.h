@@ -3,8 +3,10 @@
 
 #include <stdint.h>
 
-uint32_t sqrt(uint32_t v);
+uint32_t sqrt32(uint32_t v);
 
 uint16_t int_sqrt32(uint32_t x);
+
+uint32_t SquareRootRounded(uint32_t a_nInput);
 
 #endif
