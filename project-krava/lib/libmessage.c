@@ -16,6 +16,9 @@ struct Message {
 	int batteriesCount;
 };
 
+/*
+ * Helper function for adding temperature into struct
+ */
 void addTemperature (struct Message m, int temperature) {
 	int tempC = m.tempsCount;
 	// if the temperatures stack is full ditch the last measurement to make room for new one
@@ -30,14 +33,15 @@ void addTemperature (struct Message m, int temperature) {
 	m.tempsCount = tempC + 1;
 }
 
+/*
+ * Helper function for adding acceleration into struct
+ */
 void addAcceleration (struct Message m, int acceleration) {
 	int accC = m.accelerationsCount;
-	// if the temperatures stack is full ditch the last measurement to make room for new one
+	// if the acceleration stack is full ditch the last measurement to make room for new one
 	if (accC == MESSAGE_MAX_SIZE) {
 		int i;
 		for (i = 1; i < MESSAGE_MAX_SIZE; i = i + 1) {
-			m.accelerations[i - 1] = m.accelerations[i];
-			m.accelerations[i - 1] = m.accelerations[i];
 			m.accelerations[i - 1] = m.accelerations[i];
 		}
 		accC = MESSAGE_MAX_SIZE - 1;
@@ -46,9 +50,12 @@ void addAcceleration (struct Message m, int acceleration) {
 	m.accelerationsCount = accC + 1;
 }
 
+/*
+ * Helper function for adding battery status into struct
+ */
 void addBattery (struct Message m, int battery) {
 	int batteryC = m.batteriesCount;
-	// if the temperatures stack is full ditch the last measurement to make room for new one
+	// if the battery status stack is full ditch the last measurement to make room for new one
 	if (batteryC == MESSAGE_MAX_SIZE) {
 		int i;
 		for (i = 1; i < MESSAGE_MAX_SIZE; i = i + 1) {
@@ -59,5 +66,6 @@ void addBattery (struct Message m, int battery) {
 	m.batteries[batteryC] = battery;
 	m.batteriesCount = batteryC + 1;
 }
+
 
 
