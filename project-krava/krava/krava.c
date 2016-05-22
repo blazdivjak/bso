@@ -209,7 +209,7 @@ PROCESS_THREAD(communication, ev, data)
 		}
 		//reinitialize mesh if sending failed more than 5 times
 		//TODO: SendFailedCounter=queue length
-		if(sendFailedCounter%10){
+		if(sendFailedCounter%10==0){
 			printf("Closing Mesh\n");
 			mesh_close(&mesh);
 			mesh_open(&mesh, 14, &callbacks);
