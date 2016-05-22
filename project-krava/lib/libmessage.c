@@ -3,6 +3,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 
 //#define MESSAGE_MAX_SIZE 50
 //
@@ -155,7 +156,7 @@ void printMessage(struct Message m) {
 char * encode(struct Message m) {
 
 	int size = getEncodeDataSize(m);
-	char * message = malloc(size); //[size];
+	char * message = malloc(size);
 	int * data = encodeData(m);
 
 	int i;
