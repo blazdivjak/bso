@@ -13,14 +13,20 @@ int main()
 
 	printf("Adding battery reading \n");
 	m = addBattery(m, 10);
+	m = addBattery(m, 16);
+	m = addBattery(m, 65);
 	printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
 
 	printf("Adding temperature reading \n");
 	m = addTemperature(m, 11);
+	m = addTemperature(m, 13);
+	m = addTemperature(m, 14);
 	printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
 
 	printf("Adding acceleration reading \n");
 	m = addAcceleration(m, 12);
+	m = addAcceleration(m, 15);
+	m = addAcceleration(m, 17);
 	printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
 
 	printf("Calculating encoded data size \n");
@@ -35,8 +41,15 @@ int main()
     }
     printf("\n");
 
-    printf("Printing message\n");
+    printf("Printing message \n");
     printMessage(m);
+
+	printf("Encode message \n");
+	char * encodedMessage = encode(m);
+	printf("%s\n", encodedMessage);
+
+	printf("Decoding encoded message\n");
+	printMessage(decode(encodedMessage));
 
 	printf("Reseting all readings \n");
 	m = resetMessage(m);

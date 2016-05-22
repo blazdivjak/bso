@@ -134,27 +134,64 @@ void printMessage(struct Message m) {
 	printf("Temperature measurements:\n");
 	int i;
     for (i = 0; i < m.tempsCount; i = i + 1) {
-		printf("%d", m.temps[i]);
+		printf("%d ", m.temps[i]);
 	}
 	printf("\n");
 	printf("Acceleration measurements:\n");
 	for (i = 0; i < m.accelerationsCount; i = i + 1) {
-		printf("%d", m.accelerations[i]);
+		printf("%d ", m.accelerations[i]);
 	}
 	printf("\n");
 	printf("Battery measurements:\n");
 	for (i = 0; i < m.batteriesCount; i = i + 1) {
-		printf("%d", m.batteries[i]);
+		printf("%d ", m.batteries[i]);
 	}
 	printf("\n");
+}
+
+/*
+ * Encode data structure to char array
+ */
+char * encode(struct Message m) {
+
+	int size = getEncodeDataSize(m);
+	char * message = malloc(size); //[size];
+	int * data = encodeData(m);
+
+	int i;
+	for (i = 0; i < size; i += 1) {
+		message[i] = data[i];
+	}
+
+	return message;
 }
 
 /*
  * Decodes array of ints into Message struct
  */
 struct Message decode(char * message) {
-	// TODO: to be implemented
-	printf("To be implemented");
+	struct Message m;
+
+	m.tempsCount = message[0];
+	m.accelerationsCount = message[1];
+	m.batteriesCount = message[2];
+
+	int i;
+	int j = 3;
+	for (i = 0; i < m.tempsCount; i = i + 1) {
+		m.temps[i] = message[j];
+		j += 1;
+	}
+	for (i = 0; i < m.accelerationsCount; i = i + 1) {
+		m.accelerations[i] = message[j];
+		j += 1;
+	}
+	for (i = 0; i < m.batteriesCount; i = i + 1) {
+		m.batteries[i] = message[j];
+		j += 1;
+	}
+
+	return m;
 }
 
 

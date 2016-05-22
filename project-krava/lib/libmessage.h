@@ -6,11 +6,11 @@
 //struct Message;
 typedef struct Message {
 	int temps[MESSAGE_MAX_SIZE];
-	int tempsCount:8;
+	int tempsCount;
 	int accelerations[MESSAGE_MAX_SIZE];
-	int accelerationsCount:8;
+	int accelerationsCount;
 	int batteries[MESSAGE_MAX_SIZE];
-	int batteriesCount:8;
+	int batteriesCount;
 } Message;
 
 struct Message addTemperature (struct Message m, int temperature);
@@ -20,6 +20,7 @@ struct Message resetMessage(struct Message m);
 int * encodeData(struct Message m);
 int getEncodeDataSize(struct Message m);
 void printMessage(struct Message m);
+char * encode(struct Message m);
 struct Message decode(char * message);
 
 #endif
