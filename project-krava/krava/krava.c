@@ -21,17 +21,18 @@
 
 #define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)*1
 #define RSSI_READ_INTERVAL (CLOCK_SECOND)*5
-#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*10
+#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*360
 #define TEMP_READ_INTERVAL (CLOCK_SECOND)*30
 #define BATTERY_READ_INTERVAL (CLOCK_SECOND)*30
 #define SEND_INTERVAL (CLOCK_SECOND)*30
 
 #define GATEWAY_ADDRESS 0
-#define MY_ADDRESS_1 1
-#define MY_ADDRESS_2 1
+#define MY_ADDRESS_1 0//1
+#define MY_ADDRESS_2 0//1
 
 static uint8_t myAddress_1 = MY_ADDRESS_1;
 static uint8_t myAddress_2 = MY_ADDRESS_2;
+static uint8_t sendFailedCounter = 0;
 
 /*
 * Mesh functions
@@ -43,28 +44,16 @@ static void sent(struct mesh_conn *c)
 }
 static void timedout(struct mesh_conn *c)
 {
-  printf("packet timedout\n");
+  //TODO: Move this function to ACK receive function
+  sendFailedCounter += 1;
+  printf("packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
-  
+
+  //TODO: Check received packet type if it is ACK remove packet from SENT PACKET QUEUE
+  		 
   printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
-
-  /*if (myAddress == FROM_MOTE_ADDRESS){    
-    // receive ACK and clear queue
-    queue_remove_first(message_size/3);
-
-  } else if (myAddress == TO_MOTE_ADDRESS){
-    // receive data, print to STD_OUT
-    uint8_t index_to_confirm;
-    int i;
-    for(i=0; i<packetbuf_datalen(); i+=3){
-      index_to_confirm = decode_temp(((char *)packetbuf_dataptr()) + i);
-    }
-    //confirm message a.k.a send ACK
-    packetbuf_copyfrom(index_to_confirm, 1);
-    mesh_send(&mesh, from);
-  }  */
 }
 
 /*
@@ -76,8 +65,8 @@ const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 /*
 * Communication functions
 */
-static void setAddress(){  
-  linkaddr_t addr;  
+static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){  
+  linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;
   printf("My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
@@ -197,12 +186,10 @@ PROCESS_THREAD(communication, ev, data)
 {	
 	//Our process		
 	PROCESS_BEGIN();
-	setAddress();
+	setAddress(node_id, myAddress_2);
+		
+	static struct etimer sendInterval;	
 	
-	static struct etimer meshRefreshInterval;
-	static struct etimer sendInterval;
-
-	etimer_set(&meshRefreshInterval, MESH_REFRESH_INTERVAL);
 	etimer_set(&sendInterval, SEND_INTERVAL);
 	printf("Starting Mesh\n");
 	mesh_open(&mesh, 14, &callbacks);
@@ -211,16 +198,24 @@ PROCESS_THREAD(communication, ev, data)
 	while(1) {
 	 
 		PROCESS_WAIT_EVENT();
+		//set address to address in settings
+		if(ev == sensors_event && data == &button_sensor){
+      		setAddress(myAddress_1, myAddress_2);
+    	}		
+    	//sent message
 		if(etimer_expired(&sendInterval)){
 			sendMessage();
 			etimer_reset(&sendInterval);
 		}
-		if(etimer_expired(&meshRefreshInterval)){
+		//reinitialize mesh if sending failed more than 5 times
+		//TODO: SendFailedCounter=queue length
+		if(sendFailedCounter%10){
 			printf("Closing Mesh\n");
 			mesh_close(&mesh);
 			mesh_open(&mesh, 14, &callbacks);
 			printf("Initializing Mesh\n");
-			etimer_reset(&meshRefreshInterval);
+			//etimer_reset(&meshRefreshInterval);
+			sendFailedCounter+=10;
 		}
 	}	
 	PROCESS_END();
