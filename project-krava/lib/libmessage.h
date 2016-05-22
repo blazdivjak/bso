@@ -38,6 +38,7 @@ typedef struct Packets {
 } Packets;
 
 struct Packets resetPackets (struct Packets p);
+struct Packets addMessage (struct Packets p, struct Message message);
 struct Packets ackMessage (struct Packets p, int messageID);
 
 #endif

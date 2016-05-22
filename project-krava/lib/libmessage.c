@@ -214,6 +214,26 @@ struct Packets resetPackets (struct Packets p) {
 }
 
 /*
+ * Add Message to Packets buffer
+ */
+struct Packets addMessage (struct Packets p, struct Message message) {
+	int count = p.count;
+	// if the packets buffer is full ditch the last packet to make room for new one
+	if (count == BUFFER_MAX_SIZE) {
+		int i;
+		for (i = 1; i < BUFFER_MAX_SIZE; i = i + 1) {
+			p.payload[i - 1] = p.payload[i];
+		}
+		count = BUFFER_MAX_SIZE - 1;
+	}
+	p.payload[count] = message;
+	p.count = count + 1;
+
+	return p;
+}
+
+
+/*
  * Removes Message structure from Packets buffer
  */
 struct Packets ackMessage (struct Packets p, int messageID) {
