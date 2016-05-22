@@ -19,8 +19,7 @@ int main()
 
 	printf("Adding temperature reading \n");
 	m = addTemperature(m, 11);
-	m = addTemperature(m, 13);
-	m = addTemperature(m, 14);
+	m = addTemperature(m, -13);
 	printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
 
 	printf("Adding acceleration reading \n");
