@@ -20,6 +20,16 @@
 //};
 
 /*
+ * Sets random number to message structure - we can assume the number will be unique in our system
+ */
+struct Message setID (struct Message m) {
+	int r = rand();
+	m.id = r;
+	return m;
+}
+
+
+/*
  * Helper function for adding temperature into struct
  */
 struct Message addTemperature (struct Message m, int temperature) {
@@ -195,5 +205,31 @@ struct Message decode(char * message) {
 	return m;
 }
 
+/*
+ * Resets Packets strructure 
+ */
+struct Packets resetPackets (struct Packets p) {
+	p.count = 0;
+	return p;
+}
 
+/*
+ * Removes Message structure from Packets buffer
+ */
+struct Packets ackMessage (struct Packets p, int messageID) {
+	int i;
+	for (i = 0; i < p.count; i += 1) {
+		if (p.payload[i].id == messageID)
+			printf("Message with ID %d found on location %d\n", messageID, i);
+	}
+
+	int j;
+	for (j = i; j < p.count - 1; j += 1) {
+		p.payload[j] = p.payload[j + 1];
+	}
+	p.count -= 1;
+	
+	return p;
+
+}
 
