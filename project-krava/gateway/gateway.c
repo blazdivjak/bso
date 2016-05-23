@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include "contiki.h"
 #include "dev/serial-line.h"
 #include "dev/uart0.h"
@@ -17,6 +18,11 @@
 #include "sys/node-id.h" 
 
 #include "../lib/libmessage.h"
+
+#define UART0_CONF_WITH_INPUT 1
+
+// Commands
+#define CMD_NUMBER_OF_MOTES "NOM"
 
 /*
 Static values
@@ -42,18 +48,7 @@ static void increase_address(){
   myAddress+=1;
 }
 
-static int uart_rx_callback(unsigned char c) {
-     uint8_t u;
-     printf("\nReceived %c",c);
-     // u = (uint8_t)c;
-     // printf("\nReceived %u",u);
-}
 
-/*
-* Send and receive functions
-* - mote 1.0 sends temperatures and if it receives ack it removes number of sent temperatures from queue
-* - mote 3.0 receives temperature and uses decode_temp() to display it. Than it sends confirmation message.
-*/
 static void sent(struct mesh_conn *c)
 {
   printf("Packet sent\n");
@@ -65,9 +60,10 @@ static void timedout(struct mesh_conn *c)
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
-  //printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
 	// TODO
-  printf("Received packet\n"); 
+  struct Message msg = decode((char *)packetbuf_dataptr());
+  printMessage(msg);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -80,12 +76,9 @@ PROCESS_THREAD(gateway_main, ev, data)
 {  
   PROCESS_EXITHANDLER(mesh_close(&mesh);)
   PROCESS_BEGIN();  
-  // process_init();
-  // serial_line_init();
-  
-  serial_line_init();
-  // uart0_init(BAUD2UBR(115200));
-  // uart0_set_input(uart_rx_callback);
+  /* Init UART for receiveing */
+  uart0_init(BAUD2UBR(115200));
+  uart0_set_input(serial_line_input_byte);
 
   mesh_open(&mesh, 14, &callbacks);  
   
@@ -101,10 +94,13 @@ PROCESS_THREAD(gateway_main, ev, data)
     //set address
     if(ev == sensors_event && data == &button_sensor){
     	printf("button\n");
-      	increase_address();
+      increase_address();
     }
     if (ev == serial_line_event_message && data != NULL) {
     	printf("received line: %s\n", (char *)data);
+      if (!strcmp(CMD_NUMBER_OF_MOTES, data)) {
+        printf("get number of motes..\n");
+      }
     }
 
 
