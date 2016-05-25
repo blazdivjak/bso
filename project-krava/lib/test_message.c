@@ -1,58 +1,69 @@
 #include <stdio.h>
+#include <stdint.h>
 #include "libmessage.h"
+#include <inttypes.h>
 
 // to run this programm use: gcc -o test_message test_message.c libmessage.c && ./test_message
 int main()
 {
-   
+    int i;
 	Message m;
-	m = resetMessage(m);
+	resetMessage(&m);
 
-	printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
+	printf("Motions: %d, neighbours: %d\n", m.motionCount, m.neighbourCount);
 
 
-	printf("Adding battery reading \n");
-	m = addBattery(m, 10);
-	m = addBattery(m, 16);
-	m = addBattery(m, 65);
-	printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
+	printf("Adding motions reading \n");
+	addMotion(&m, 0);
+	addMotion(&m, 1);
+	addMotion(&m, 2);
+	addMotion(&m, 3);
+	addMotion(&m, 2);
+	addMotion(&m, 1);
+	printf("Motions: 0x%0x\n", (uint16_t) (m.motions & 0xFFFFFFFF));
+	static uint8_t motions[10];
+	getMotionArray(&m, motions);
+	for (i = 0; i < m.motionCount; i++) {
+		printf("%02x ", motions[i]);
+	}
+	printf("\nMotions: %d, neighbours: %d\n", m.motionCount, m.neighbourCount);
 
-	printf("Adding temperature reading \n");
-	m = addTemperature(m, 11);
-	m = addTemperature(m, -13);
-	printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
+	printf("Adding neighbours \n");
+	addNeighbour(&m, 11);
+	addNeighbour(&m, 113);
+	printf("Motions: %d, neighbours: %d\n", m.motionCount, m.neighbourCount);
 
-	printf("Adding acceleration reading \n");
-	m = addAcceleration(m, 12);
-	m = addAcceleration(m, 15);
-	m = addAcceleration(m, 17);
-	printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
+	printMessage(&m);
 
 	printf("Calculating encoded data size \n");
-	int size = getEncodeDataSize(m);
-	printf("Encoded data size is: %d\n", size);
+	static uint8_t buffer[35];
+	uint8_t size = encodeData(&m, buffer);
+	for (i = 0; i < size; i++) {
+		printf("%02x ", buffer[i]);
+	}
+	printf("\nEncoded data size is: %d, calculated is: %d\n", size, getEncodeDataSize(&m));
 
-	printf("Encoding data to array of ints \n");
-	int * enc = encodeData(m);
-	int i;
-	for(i = 0; i < size; i++) {
-    	printf("%d ", enc[i]);
-    }
-    printf("\n");
+	// printf("Encoding data to array of ints \n");
+	// int * enc = encodeData(m);
+	// int i;
+	// for(i = 0; i < size; i++) {
+ //    	printf("%d ", enc[i]);
+ //    }
+ //    printf("\n");
 
-    printf("Printing message \n");
-    printMessage(m);
+ //    printf("Printing message \n");
+ //    printMessage(m);
 
-	printf("Encode message \n");
-	char * encodedMessage = encode(m);
-	printf("%s\n", encodedMessage);
+	// printf("Encode message \n");
+	// char * encodedMessage = encode(m);
+	// printf("%s\n", encodedMessage);
 
-	printf("Decoding encoded message\n");
-	printMessage(decode(encodedMessage));
+	// printf("Decoding encoded message\n");
+	// printMessage(decode(encodedMessage));
 
-	printf("Reseting all readings \n");
-	m = resetMessage(m);
-	printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
+	// printf("Reseting all readings \n");
+	// m = resetMessage(m);
+	// printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
 
 	return 0;
 }

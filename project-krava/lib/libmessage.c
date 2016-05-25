@@ -2,8 +2,6 @@
   #include "libmessage.h"
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
 
 //#define MESSAGE_MAX_SIZE 50
 //
@@ -22,234 +20,191 @@
 /*
  * Sets random number to message structure - we can assume the number will be unique in our system
  */
-struct Message setID (struct Message m) {
-	int r = rand();
-	m.id = r;
-	return m;
+void setMsgID (struct Message *m) {
+	m->id = (uint16_t) rand();
 }
 
 
 /*
- * Helper function for adding temperature into struct
+ * Helper function for adding motion into struct
  */
-struct Message addTemperature (struct Message m, int temperature) {
-	int tempC = m.tempsCount;
-	// if the temperatures stack is full ditch the last measurement to make room for new one
-	if (tempC == MESSAGE_MAX_SIZE) {
-		int i;
-		for (i = 1; i < MESSAGE_MAX_SIZE; i = i + 1) {
-			m.temps[i - 1] = m.temps[i];
-		}
-		tempC = MESSAGE_MAX_SIZE - 1;
-	}
-	m.temps[tempC] = temperature;
-	m.tempsCount = tempC + 1;
+void addMotion (struct Message *m, uint8_t motion) {
+	if (m->motionCount < 32) 
+		m->motionCount++;
+	else 
+		m->motionCount = 32;
 
-	return m;
+	m->motions = (m->motions << 2) + (motion & 0x03); // shift motions by two and append the new motion to 2 LSBits
 }
 
-/*
- * Helper function for adding acceleration into struct
- */
-struct Message addAcceleration (struct Message m, int acceleration) {
-	int accC = m.accelerationsCount;
-	// if the acceleration stack is full ditch the last measurement to make room for new one
-	if (accC == MESSAGE_MAX_SIZE) {
-		int i;
-		for (i = 1; i < MESSAGE_MAX_SIZE; i = i + 1) {
-			m.accelerations[i - 1] = m.accelerations[i];
-		}
-		accC = MESSAGE_MAX_SIZE - 1;
+void getMotionArray (struct Message *m, uint8_t *buffer) {
+	uint8_t i;
+	uint64_t tmp = m->motions;
+	for (i = 0; i < m->motionCount; i++) {
+		buffer[i] = (uint8_t) (tmp & 0x03);
+		tmp = tmp >> 2;
 	}
-	m.accelerations[accC] = acceleration;
-	m.accelerationsCount = accC + 1;
-
-	return m;
 }
 
-/*
- * Helper function for adding battery status into struct
- */
-struct Message addBattery (struct Message m, int battery) {
-	int batteryC = m.batteriesCount;
-	// if the battery status stack is full ditch the last measurement to make room for new one
-	if (batteryC == MESSAGE_MAX_SIZE) {
-		int i;
-		for (i = 1; i < MESSAGE_MAX_SIZE; i = i + 1) {
-			m.batteries[i - 1] = m.batteries[i];
-		}
-		batteryC = MESSAGE_MAX_SIZE - 1;
-	}
-	m.batteries[batteryC] = battery;
-	m.batteriesCount = batteryC + 1;
 
-	return m;
+void addNeighbour (struct Message *m, uint8_t neighbour) {	//can only add MAX_NEIGHBOURS neighbours
+	if (m->neighbourCount < MAX_NEIGHBOURS) {
+		m->neighbours[m->neighbourCount] = neighbour;
+		m->neighbourCount++;
+	}
 }
 
 
 /*
  * Reset struct Message and set values to empy
  */
-struct Message resetMessage(struct Message m){
-	m.tempsCount = 0;
-	m.accelerationsCount = 0;
-	m.batteriesCount = 0;
+void resetMessage(struct Message *m) {
+	m->motionCount = 0;
+	m->neighbourCount = 0;
+	m->mote_id = 0;
+	m->temp = 0;
+	m->battery = 0;
+	m->motions = 0;
 
-	return m;
+	setMsgID(m);	// set a new ID
 }
 /*
  * Encode message struct into int array to be sent
+ * buffer passed in has to be at least size MESSAGE_BYTE_SIZE_MAX
+ * returns size of encoded data
  */
-int * encodeData(struct Message m) {
-	static int buffer[3 + (3 * MESSAGE_MAX_SIZE)];
+uint8_t encodeData(struct Message *m, uint8_t *buffer) {
 
-	int i;
-	int j;
-	buffer[0] = m.tempsCount;
-	buffer[1] = m.accelerationsCount;
-	buffer[2] = m.batteriesCount;
-	j = 3;
-	for (i = 0; i < m.tempsCount; i = i + 1) {
-		buffer[j] = m.temps[i];
-		j += 1;
-	}
-	for (i = 0; i < m.accelerationsCount; i = i + 1) {
-		buffer[j] = m.accelerations[i];
-		j += 1;
-	}
-	for (i = 0; i < m.batteriesCount; i = i + 1) {
-		buffer[j] = m.batteries[i];
-		j += 1;
+	int8_t i = 0, j = 0;
+	buffer[j++] = (uint8_t)((m->id) & 0xFF);
+	buffer[j++] = (uint8_t)(((m->id) & 0xFF00)>>8);
+	buffer[j++] = m->mote_id;
+	buffer[j++] = m->temp;
+	buffer[j++] = m->battery;
+
+	buffer[j++] = m->motionCount;
+	i = m->motionCount;
+	uint64_t tmp = m->motions;
+	do {
+		buffer[j++] = (uint8_t)(tmp & 0xFF);
+		tmp = tmp >> 8;
+		i-=4;
+	} while (i > 0);
+
+	buffer[j++] = m->neighbourCount;
+	for (i = 0; i < m->neighbourCount; i++) {
+		buffer[j++] = m->neighbours[i];
 	}
 
-	return buffer;
+	return j;
 }
 
 /*
  * Returns encoded data size (size of int array)
  */
-int getEncodeDataSize(struct Message m) {
-	int size = 3 + m.tempsCount + m.accelerationsCount + m.batteriesCount;
-	return size;
+uint8_t getEncodeDataSize(struct Message *m) {
+	return 7 + m->neighbourCount + (m->motionCount>>2) + ((m->motionCount & 0x03) == 0 ? 0 : 1);
 }
 
 /*
  * Prints data from Message struct
  */
-void printMessage(struct Message m) {
+void printMessage(struct Message *m) {
 	//char buffer [m.tempsCount * 1 + m.accelerationsCount * 3 + m.batteriesCount * 1];
 	//int bufferSize = 0;
 	//bufferSize = sprintf(buffer, "%d plus %d is %d", a, b, a+b);
-	printf("Message struct contains: \n %2d temperature measurements, \n %2d acceleration measurements, \n %2d battery measurements \n", 
-		m.tempsCount, m.accelerationsCount, m.batteriesCount);
-	printf("Temperature measurements:\n");
-	int i;
-    for (i = 0; i < m.tempsCount; i = i + 1) {
-		printf("%d ", m.temps[i]);
+	printf("Message struct contains: %2d motion measurements and %2d neighbours \n", 
+		m->motionCount, m->neighbourCount);
+	printf("Msg ID: %d, Mote ID: %d, Temp: %d, Battery: %d\n", m->id, m->mote_id, m->temp, m->battery);
+
+	printf("Motions:");
+	uint8_t buffer[m->motionCount];
+	getMotionArray(m, buffer);
+	uint8_t i;
+	for (i=0; i < m->motionCount; i++) {
+		printf("%d ", buffer[i]);
 	}
-	printf("\n");
-	printf("Acceleration measurements:\n");
-	for (i = 0; i < m.accelerationsCount; i = i + 1) {
-		printf("%d ", m.accelerations[i]);
+
+	printf("\nNeighbours: ");
+	for (i=0; i < m->neighbourCount; i++) {
+		printf("%d, ", m->neighbours[i]);
 	}
-	printf("\n");
-	printf("Battery measurements:\n");
-	for (i = 0; i < m.batteriesCount; i = i + 1) {
-		printf("%d ", m.batteries[i]);
-	}
-	printf("\n");
+	printf("\n");	
 }
 
-/*
- * Encode data structure to char array
- */
-char * encode(struct Message m) {
+// /*
+//  * Decodes array of ints into Message struct
+//  */
+// struct Message decode(char * message) {
+// 	struct Message m;
 
-	int size = getEncodeDataSize(m);
-	char * message = malloc(size);
-	int * data = encodeData(m);
+// 	m.tempsCount = message[0];
+// 	m.accelerationsCount = message[1];
+// 	m.batteriesCount = message[2];
 
-	int i;
-	for (i = 0; i < size; i += 1) {
-		message[i] = data[i];
-	}
+// 	int i;
+// 	int j = 3;
+// 	for (i = 0; i < m.tempsCount; i = i + 1) {
+// 		m.temps[i] = message[j];
+// 		j += 1;
+// 	}
+// 	for (i = 0; i < m.accelerationsCount; i = i + 1) {
+// 		m.accelerations[i] = message[j];
+// 		j += 1;
+// 	}
+// 	for (i = 0; i < m.batteriesCount; i = i + 1) {
+// 		m.batteries[i] = message[j];
+// 		j += 1;
+// 	}
 
-	return message;
-}
+// 	return m;
+// }
 
-/*
- * Decodes array of ints into Message struct
- */
-struct Message decode(char * message) {
-	struct Message m;
+// /*
+//  * Resets Packets strructure 
+//  */
+// struct Packets resetPackets (struct Packets p) {
+// 	p.count = 0;
+// 	return p;
+// }
 
-	m.tempsCount = message[0];
-	m.accelerationsCount = message[1];
-	m.batteriesCount = message[2];
+// /*
+//  * Add Message to Packets buffer
+//  */
+// struct Packets addMessage (struct Packets p, struct Message message) {
+// 	int count = p.count;
+// 	// if the packets buffer is full ditch the last packet to make room for new one
+// 	if (count == BUFFER_MAX_SIZE) {
+// 		int i;
+// 		for (i = 1; i < BUFFER_MAX_SIZE; i = i + 1) {
+// 			p.payload[i - 1] = p.payload[i];
+// 		}
+// 		count = BUFFER_MAX_SIZE - 1;
+// 	}
+// 	p.payload[count] = message;
+// 	p.count = count + 1;
 
-	int i;
-	int j = 3;
-	for (i = 0; i < m.tempsCount; i = i + 1) {
-		m.temps[i] = message[j];
-		j += 1;
-	}
-	for (i = 0; i < m.accelerationsCount; i = i + 1) {
-		m.accelerations[i] = message[j];
-		j += 1;
-	}
-	for (i = 0; i < m.batteriesCount; i = i + 1) {
-		m.batteries[i] = message[j];
-		j += 1;
-	}
-
-	return m;
-}
-
-/*
- * Resets Packets strructure 
- */
-struct Packets resetPackets (struct Packets p) {
-	p.count = 0;
-	return p;
-}
-
-/*
- * Add Message to Packets buffer
- */
-struct Packets addMessage (struct Packets p, struct Message message) {
-	int count = p.count;
-	// if the packets buffer is full ditch the last packet to make room for new one
-	if (count == BUFFER_MAX_SIZE) {
-		int i;
-		for (i = 1; i < BUFFER_MAX_SIZE; i = i + 1) {
-			p.payload[i - 1] = p.payload[i];
-		}
-		count = BUFFER_MAX_SIZE - 1;
-	}
-	p.payload[count] = message;
-	p.count = count + 1;
-
-	return p;
-}
+// 	return p;
+// }
 
 
-/*
- * Removes Message structure from Packets buffer
- */
-struct Packets ackMessage (struct Packets p, int messageID) {
-	int i;
-	for (i = 0; i < p.count; i += 1) {
-		if (p.payload[i].id == messageID)
-			printf("Message with ID %d found on location %d\n", messageID, i);
-	}
+// /*
+//  * Removes Message structure from Packets buffer
+//  */
+// struct Packets ackMessage (struct Packets p, int messageID) {
+// 	int i;
+// 	for (i = 0; i < p.count; i += 1) {
+// 		if (p.payload[i].id == messageID)
+// 			printf("Message with ID %d found on location %d\n", messageID, i);
+// 	}
 
-	int j;
-	for (j = i; j < p.count - 1; j += 1) {
-		p.payload[j] = p.payload[j + 1];
-	}
-	p.count -= 1;
+// 	int j;
+// 	for (j = i; j < p.count - 1; j += 1) {
+// 		p.payload[j] = p.payload[j + 1];
+// 	}
+// 	p.count -= 1;
 	
-	return p;
+// 	return p;
 
-}
+// }
 
