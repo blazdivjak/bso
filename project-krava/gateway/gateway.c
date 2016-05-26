@@ -22,7 +22,7 @@
 
 #define UART0_CONF_WITH_INPUT 1
 #define CMD_NUMBER_OF_MOTES "NOM"
-#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*360
+#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*60
 #define GATEWAY_ADDRESS 0
 #define MY_ADDRESS_1 0//1
 #define MY_ADDRESS_2 0//1
@@ -35,8 +35,10 @@ static uint8_t myAddress_2 = MY_ADDRESS_2;
 static uint8_t sendFailedCounter = 0;
 
 /*
- * Mesh functions
- */
+* Initialize mesh
+*/
+static struct mesh_conn mesh;
+
 static void sent(struct mesh_conn *c) {
   printf("Packet sent\n");
 }
@@ -49,17 +51,21 @@ static void timedout(struct mesh_conn *c) {
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
 	
+  // if sent to me? and the message format is right ...
   Message m;
   decode(packetbuf_dataptr(), packetbuf_datalen(), &m);
   printMessage(&m);
-}
+  
+  //uint16_t message_id = m->id;
 
-/*
-* Initialize mesh
-*/
-static struct mesh_conn mesh;
+  packetbuf_copyfrom(m.id, 2);
+  mesh_send(&mesh, from);
+}
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 
+/*
+ * Address function
+ */
 static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){  
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
