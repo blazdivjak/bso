@@ -27,6 +27,8 @@
 #define BATTERY_READ_INTERVAL (CLOCK_SECOND)*30
 #define SEND_INTERVAL (CLOCK_SECOND)*30
 
+//Networking
+#define DEFAULT_GATEWAY_ADDRESS 0 //falback to default gateway if we cant conntact gateway
 #define GATEWAY_ADDRESS 0
 #define MY_ADDRESS_1 0//1
 #define MY_ADDRESS_2 0//1
@@ -35,12 +37,20 @@ static uint8_t myAddress_1 = MY_ADDRESS_1;
 static uint8_t myAddress_2 = MY_ADDRESS_2;
 static uint8_t sendFailedCounter = 0;
 
+//Neighbors
 #define NEIGHBOR_TABLE_REINITIALIZE_INTERVAL (CLOCK_SECOND)*360
 #define NEIGHBOR_SENSE_INTERVAL (CLOCK_SECOND)*5
 #define NEIGHBOR_SENSE_TIME (CLOCK_SECOND)*1
 #define NEIGHBOR_ADVERTISEMENT_INTERVAL (CLOCK_SECOND)*5
+#define RSSI_TRESHOLD -75
 static uint8_t kravaNeighbors[20];
 static uint8_t numberOfNeighbors = 0;
+
+//message buffer
+static uint8_t send_buffer[MESSAGE_BYTE_SIZE_MAX];
+static int rssiTreshold = RSSI_TRESHOLD;
+Message m;
+Message mNew;
 
 /*
 * Mesh functions
@@ -62,6 +72,12 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   //TODO: Check received packet type if it is ACK remove packet from SENT PACKET QUEUE
   		 
   printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
+  	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &mNew);
+  	printMessage(&mNew);
+  }else{
+  	printf("TODO this is probably message from gateway :)\n");
+  }    
 }
 
 /*
@@ -74,6 +90,7 @@ const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 * Communication functions
 */
 static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){  
+  m.mote_id = myAddress_1;
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;
@@ -87,9 +104,13 @@ static void sendMessage(){
   
   printf("Sending message to my current gateway ID: %d.0\n", GATEWAY_ADDRESS);
 
+  setMsgID(&m);
+
   linkaddr_t addr_send; 
-  char msg[2] = {1, 2};
-  packetbuf_copyfrom(msg, 2);       
+  //char msg[2] = {1, 2};
+  //packetbuf_copyfrom(msg, 2);
+  uint8_t size = encodeData(&m, send_buffer);
+  packetbuf_copyfrom(send_buffer, size);       
   addr_send.u8[0] = GATEWAY_ADDRESS;
   addr_send.u8[1] = 0;
   //printf("Mesh status: %d\n", mesh_ready(&mesh));
@@ -103,32 +124,15 @@ static void sendMessage(){
 static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 {	
 
-  static signed char rss;
-  static signed char rss_val;
-  static signed char rss_offset;	
-  rss_val = packetbuf_attr(PACKETBUF_ATTR_RSSI);
-  rss_offset=-45;
-  rss=rss_val + rss_offset;  
-
-  printf("Neighbor advertisment received from %d.%d: '%s' RSSI: %d\n",
-         from->u8[0], from->u8[1], (char *)packetbuf_dataptr(), rss);
-
-  //Add neighbor to current neighbor table if neighbor not in the table yet
-  int addNeighborToTable = 1;
-  int i;
-
-  //TODO: Check message rssi for adding only close neighbors
-  for(i = 0; i<sizeof(kravaNeighbors);i++){
-  	if(kravaNeighbors[i]==from->u8[0]){
-  		addNeighborToTable = 0;
-  		break;
-  	}
-  }
-  if(addNeighborToTable == 1){
-  	kravaNeighbors[numberOfNeighbors%20]=from->u8[0];
-  	numberOfNeighbors+=1;
-  	printf("Adding neighbor: %d to table. Current number of neighbors: %d.\n",from->u8[0], numberOfNeighbors);
-  }  
+  int rssi;	
+  rssi = readRSSI();
+  //printf("Neighbor advertisment received from %d.%d: '%s' RSSI: %d\n", from->u8[0], from->u8[1], (char *)packetbuf_dataptr(), rssi);
+    
+  //Check message rssi for adding only close neighbors  
+  if (rssi>=rssiTreshold){
+  	addNeighbour(&m, from->u8[0]);
+	printf("Neighbor detected adding %d to table. RSSI: %d, Current number of neighbors: %d.\n",from->u8[0],rssi, m.neighbourCount);
+  }    
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;
@@ -138,16 +142,18 @@ static struct broadcast_conn broadcast;
 */
 void readBattery(){
   
-    uint16_t bateria = battery_sensor.value(0);
-    float mv = (bateria * 2.500 * 2) / 4096;
-    printf("Battery: %i (%ld.%03d mV)\n", bateria, (long)mv,
-           (unsigned)((mv - myFloor(mv)) * 1000));
+    //uint16_t bateria = battery_sensor.value(0);
+    //float mv = (bateria * 2.500 * 2) / 4096;
+    //printf("Battery: %i (%ld.%03d mV)\n", bateria, (long)mv,(unsigned)((mv - myFloor(mv)) * 1000));
+    m.battery = decodeBattery(battery_sensor.value(0));
+
 }  
 void readTemperature(){
 	
-	static int16_t decoded_temperature;
+	static int8_t decoded_temperature;
 	decoded_temperature =  decodeTemperature(tmp102_read_temp_raw());	
-	printTemperature(decoded_temperature);
+	//printTemperature(decoded_temperature);
+	m.temp = decoded_temperature;
 }
 void readMovement(){
 	
@@ -156,14 +162,23 @@ void readMovement(){
 	x = adxl345.value(X_AXIS);
     y = adxl345.value(Y_AXIS);
     z = adxl345.value(Z_AXIS);       
-    printf("Movement: x: %d y: %d z: %d\n",x, y, z);    
-}
-void readRSSI(){
+    //printf("Movement: x: %d y: %d z: %d\n",x, y, z);    
+    addMotion(&m, 1);
+    //TODO: Compare with previous motion and find 0,1,2,3 motion statuses.
 
-	printf("Reading RSSI...\n");
-	//printf("last_rssi %d\n",(signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI));
 }
+int readRSSI(){
+		
+  static signed char rssi;
+  static signed char rss_val;  
+  static signed char rss_offset;
+  rss_val = packetbuf_attr(PACKETBUF_ATTR_RSSI);
+  //rss_val = (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI);  
+  rss_offset=-45;
+  rssi=rss_val + rss_offset;   
 
+  return rssi;
+}
 
 /*
 *Process definitions
@@ -207,11 +222,7 @@ PROCESS_THREAD(krava, ev, data)
 		if(etimer_expired(&movementReadInterval)){
 			readMovement();
 			etimer_reset(&movementReadInterval);
-		}
-		if(etimer_expired(&rssiReadInterval)){
-			readRSSI();
-			etimer_reset(&rssiReadInterval);
-		}
+		}		
 		if(etimer_expired(&temperatureReadInterval)){
 			readTemperature();
 			readBattery();			
@@ -233,8 +244,9 @@ PROCESS_THREAD(communication, ev, data)
 {	
 	//Our process		
 	PROCESS_BEGIN();
-	printf("Communication process\n");
-	setAddress(node_id, myAddress_2);
+	resetMessage(&m);
+	printf("Communication process\n");	
+	setAddress(node_id, myAddress_2);		
 		
 	static struct etimer sendInterval;
 	static struct etimer meshRefreshInterval;	
@@ -260,8 +272,9 @@ PROCESS_THREAD(communication, ev, data)
 		//TODO: SendFailedCounter=queue length
 		//if(sendFailedCounter%10==0){
 		if(etimer_expired(&meshRefreshInterval)){
-			printf("Closing Mesh\n");
+			printf("Closing Mesh\n");			
 			mesh_close(&mesh);
+			m.neighbourCount = 0;
 			mesh_open(&mesh, 14, &callbacks);
 			printf("Initializing Mesh\n");			
 			//sendFailedCounter+=10;
@@ -292,18 +305,12 @@ PROCESS_THREAD(neighbors, ev, data)
 	//Process main loop
 	while(1) {
 		PROCESS_WAIT_EVENT();	
-
-		//Reinitialize neighbor table TODO: Could be moved to mesh reinitialization and done there
-		if(etimer_expired(&neighborTableRinitializeInterval)){
-			printf("Clearing neighbor cache\n");
-			etimer_reset(&neighborTableRinitializeInterval);
-		}
-
+		
 		//sense neighbors every cca 5s for 1s
 		if(etimer_expired(&neighborSenseInterval)){
 			if(sensing==0){
 				broadcast_open(&broadcast, 129, &broadcast_call);
-				printf("Sensing for neighbors\n");								
+				//printf("Sensing for neighbors\n");								
 				etimer_set(&neighborSenseTime, NEIGHBOR_SENSE_TIME);
 				sensing = 1;
 			}						
@@ -312,7 +319,7 @@ PROCESS_THREAD(neighbors, ev, data)
 		if(etimer_expired(&neighborSenseTime)){
 			if(sensing == 1){
 				broadcast_close(&broadcast);
-				printf("Sensing stoped\n");					
+				//printf("Sensing stoped\n");					
 				etimer_set(&neighborSenseInterval, NEIGHBOR_SENSE_INTERVAL + random_rand() % (NEIGHBOR_SENSE_INTERVAL));
 				sensing = 0;
 			}						
@@ -321,9 +328,9 @@ PROCESS_THREAD(neighbors, ev, data)
 		//send advertisment to your neighbors every 5s
 		if(etimer_expired(&neighborAdvertismentInterval)){
 			broadcast_open(&broadcast, 129, &broadcast_call);
- 			packetbuf_copyfrom("Hello I am your neighbor krava", 30);    
+ 			packetbuf_copyfrom("Hello", 5);    
     		broadcast_send(&broadcast);
-    		printf("Neighbor advertisment sent\n");
+    		//printf("Neighbor advertisment sent\n");
 			etimer_set(&neighborAdvertismentInterval, NEIGHBOR_SENSE_INTERVAL + random_rand() % (NEIGHBOR_SENSE_INTERVAL));
 			broadcast_close(&broadcast);
 		}				
