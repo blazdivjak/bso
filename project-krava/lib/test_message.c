@@ -32,6 +32,10 @@ int main()
 	addNeighbour(&m, 11);
 	addNeighbour(&m, 11);
 	addNeighbour(&m, 113);
+	addNeighbour(&m, 113);
+	addNeighbour(&m, 113);
+	addNeighbour(&m, 113);
+	addNeighbour(&m, 113);
 	printf("Motions: %d, neighbours: %d\n", m.motionCount, m.neighbourCount);
 
 	printMessage(&m);

@@ -2,7 +2,8 @@
   #include "libsensors.h"
 #endif 
 
-int16_t decodeTemperature(int16_t raw){
+// Returns temp ranging from -127 to 127 degrees Celisus
+int8_t decodeTemperature(int16_t raw){
   
   /**
   * Decode raw temperature to float
@@ -20,6 +21,9 @@ int16_t decodeTemperature(int16_t raw){
     absraw = (raw ^ 0xFFFF) + 1;
     sign = -1;
   }
+  if ((absraw >> 8) > 127) {
+      absraw = 127;
+    }
   tempint  = (absraw >> 8) * sign;
   // tempfrac = ((absraw>>4) % 16) * 625; // Info in 1/10000 of degree
   // minus = ((tempint == 0) & (sign == -1)) ? '-'  : ' ' ;
@@ -27,11 +31,11 @@ int16_t decodeTemperature(int16_t raw){
   // temperature = tempint + tempfrac/10000;
   // printf ("Temperature = %d.%d\n", tempint, tempfrac);
 
-  return tempint;
+  return ((int8_t)tempint);
 
 }
 
-void printTemperature(int16_t temperature){
+void printTemperature(int8_t temperature){
 
   /**
   * Print raw temperature value to string
