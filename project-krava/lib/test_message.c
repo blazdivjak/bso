@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include "libmessage.h"
 #include <inttypes.h>
+#include <stdlib.h>
+
 
 // to run this programm use: gcc -o test_message test_message.c libmessage.c && ./test_message
 int main()

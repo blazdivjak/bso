@@ -52,3 +52,13 @@ float myFloor(float x){
     return (float)((int)x - 1);
   }
 }
+
+uint8_t decodeBattery(uint16_t batraw) {
+  int8_t tmp = ((batraw * 5000 / 4096) - BAT_EMPT_VAL) * 100 / (BAT_FUL_VAL - BAT_EMPT_VAL);
+  if (tmp > 100) {
+      tmp = 100;
+  } else if (tmp < 0) {
+      tmp = 0;
+  }
+  return ((uint8_t) tmp);
+}
