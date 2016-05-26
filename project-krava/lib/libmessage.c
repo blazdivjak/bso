@@ -132,33 +132,33 @@ void printMessage(struct Message *m) {
 	printf("\n");	
 }
 
-// /*
-//  * Decodes array of ints into Message struct
-//  */
-// struct Message decode(char * message) {
-// 	struct Message m;
+/*
+ * Decodes array of ints into Message struct
+ */
+void decode(uint8_t * buffer, uint8_t buffer_len, struct Message *m)
+{
+	int8_t i = 0, j = 0;
 
-// 	m.tempsCount = message[0];
-// 	m.accelerationsCount = message[1];
-// 	m.batteriesCount = message[2];
+	m->id = buffer[j++] + (buffer[j++]<<8);
+	m->mote_id = buffer[j++];
+	m->temp = buffer[j++];
+	m->battery = buffer[j++];
 
-// 	int i;
-// 	int j = 3;
-// 	for (i = 0; i < m.tempsCount; i = i + 1) {
-// 		m.temps[i] = message[j];
-// 		j += 1;
-// 	}
-// 	for (i = 0; i < m.accelerationsCount; i = i + 1) {
-// 		m.accelerations[i] = message[j];
-// 		j += 1;
-// 	}
-// 	for (i = 0; i < m.batteriesCount; i = i + 1) {
-// 		m.batteries[i] = message[j];
-// 		j += 1;
-// 	}
+	m->motionCount = buffer[j++];
+	i = m->motionCount;
+	m->motions = 0;
+	uint8_t k = 0;
+	do {
+		m->motions += (((uint64_t)buffer[j++]) << (k*8));
+		i-=4;
+		k++;
+	} while (i > 0);
 
-// 	return m;
-// }
+	m->neighbourCount = buffer[j++];
+	for (i = 0; i < m->neighbourCount; i++) {
+		m->neighbours[i] = buffer[j++];
+	}
+}
 
 // /*
 //  * Resets Packets strructure 

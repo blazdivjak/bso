@@ -34,7 +34,7 @@ void resetMessage(struct Message *m);
 uint8_t encodeData(struct Message *m, uint8_t *buffer);
 uint8_t getEncodeDataSize(struct Message *m);
 void printMessage(struct Message *m);
-struct Message decode(uint8_t * message);
+void decode(uint8_t * buffer, uint8_t buffer_len, struct Message *m);
 
 /* 
  * Struct and helper functions for packets monitoring

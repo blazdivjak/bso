@@ -35,31 +35,21 @@ int main()
 
 	printMessage(&m);
 
-	printf("Calculating encoded data size \n");
-	static uint8_t buffer[35];
+	printf("Encoding data to array of ints \n");
+	uint8_t buffer[35];
 	uint8_t size = encodeData(&m, buffer);
 	for (i = 0; i < size; i++) {
 		printf("%02x ", buffer[i]);
 	}
 	printf("\nEncoded data size is: %d, calculated is: %d\n", size, getEncodeDataSize(&m));
 
-	// printf("Encoding data to array of ints \n");
-	// int * enc = encodeData(m);
-	// int i;
-	// for(i = 0; i < size; i++) {
- //    	printf("%d ", enc[i]);
- //    }
- //    printf("\n");
+    printf("Printing message \n");
+    printMessage(&m);
 
- //    printf("Printing message \n");
- //    printMessage(m);
-
-	// printf("Encode message \n");
-	// char * encodedMessage = encode(m);
-	// printf("%s\n", encodedMessage);
-
-	// printf("Decoding encoded message\n");
-	// printMessage(decode(encodedMessage));
+	printf("Decoding encoded message\n");
+	Message mNew;
+	decode(buffer, size, &mNew);
+	printMessage(&mNew);
 
 	// printf("Reseting all readings \n");
 	// m = resetMessage(m);
