@@ -46,12 +46,12 @@ void decode(uint8_t * buffer, uint8_t buffer_len, struct Message *m);
  * Struct and helper functions for packets monitoring
  */
 typedef struct Packets {
-	int count;
+	uint8_t count;
 	struct Message payload[BUFFER_MAX_SIZE];
 } Packets;
 
-struct Packets resetPackets (struct Packets p);
-struct Packets addMessage (struct Packets p, struct Message message);
-struct Packets ackMessage (struct Packets p, int messageID);
+void resetPackets (struct Packets *p);
+void addMessage (struct Packets *p, struct Message message);
+void ackMessage (struct Packets *p, int messageID);
 
 #endif

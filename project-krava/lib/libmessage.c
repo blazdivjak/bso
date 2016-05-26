@@ -160,51 +160,47 @@ void decode(uint8_t * buffer, uint8_t buffer_len, struct Message *m)
 	}
 }
 
-// /*
-//  * Resets Packets strructure 
-//  */
-// struct Packets resetPackets (struct Packets p) {
-// 	p.count = 0;
-// 	return p;
-// }
+/*
+ * Resets Packets strructure 
+ */
+void resetPackets (struct Packets *p) {
+	p->count = 0;
+}
 
-// /*
-//  * Add Message to Packets buffer
-//  */
-// struct Packets addMessage (struct Packets p, struct Message message) {
-// 	int count = p.count;
-// 	// if the packets buffer is full ditch the last packet to make room for new one
-// 	if (count == BUFFER_MAX_SIZE) {
-// 		int i;
-// 		for (i = 1; i < BUFFER_MAX_SIZE; i = i + 1) {
-// 			p.payload[i - 1] = p.payload[i];
-// 		}
-// 		count = BUFFER_MAX_SIZE - 1;
-// 	}
-// 	p.payload[count] = message;
-// 	p.count = count + 1;
-
-// 	return p;
-// }
+/*
+ * Add Message to Packets buffer
+ */
+void addMessage (struct Packets *p, struct Message message) {
+	// if the packets buffer is full ditch the last packet to make room for new one
+	if (p->count == BUFFER_MAX_SIZE) {
+		uint8_t i;
+		for (i = 1; i < BUFFER_MAX_SIZE; i++) {
+			p->payload[i - 1] = p->payload[i];
+		}
+		p->count--;
+	}
+	p->payload[p->count] = message;
+	p->count++;
+}
 
 
-// /*
-//  * Removes Message structure from Packets buffer
-//  */
-// struct Packets ackMessage (struct Packets p, int messageID) {
-// 	int i;
-// 	for (i = 0; i < p.count; i += 1) {
-// 		if (p.payload[i].id == messageID)
-// 			printf("Message with ID %d found on location %d\n", messageID, i);
-// 	}
+/*
+ * Removes Message structure from Packets buffer
+ */
+void ackMessage (struct Packets *p, int messageID) {
+	uint8_t i;
+	for (i = 0; i < p->count; i += 1) {
+		if (p->payload[i].id == messageID) {
+			// printf("Message with ID %d found on location %d\n", messageID, i);
+			break;
+		}
+	}
+	if (i == p->count)
+		return;
 
-// 	int j;
-// 	for (j = i; j < p.count - 1; j += 1) {
-// 		p.payload[j] = p.payload[j + 1];
-// 	}
-// 	p.count -= 1;
-	
-// 	return p;
-
-// }
+	for (; i < p->count - 1; i++) {
+		p->payload[i] = p->payload[i+1];
+	}
+	p->count--;
+}
 
