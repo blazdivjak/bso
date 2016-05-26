@@ -48,6 +48,13 @@ void getMotionArray (struct Message *m, uint8_t *buffer) {
 
 
 void addNeighbour (struct Message *m, uint8_t neighbour) {	//can only add MAX_NEIGHBOURS neighbours
+	uint8_t i = 0;
+	for (;i<m->neighbourCount; i++) {
+		if (neighbour == m->neighbours[i]) {
+			return;
+		}
+	}
+
 	if (m->neighbourCount < MAX_NEIGHBOURS) {
 		m->neighbours[m->neighbourCount] = neighbour;
 		m->neighbourCount++;

@@ -30,6 +30,7 @@ int main()
 
 	printf("Adding neighbours \n");
 	addNeighbour(&m, 11);
+	addNeighbour(&m, 11);
 	addNeighbour(&m, 113);
 	printf("Motions: %d, neighbours: %d\n", m.motionCount, m.neighbourCount);
 
@@ -54,6 +55,24 @@ int main()
 	// printf("Reseting all readings \n");
 	// m = resetMessage(m);
 	// printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
+
+	printf("\n\nPackets...\n");
+	Packets p;
+	resetPackets(&p);
+	addMessage(&p, m);
+	mNew.id++;
+	addMessage(&p, mNew);
+	printf("Message ids in packets: ");
+	for (i=0; i<p.count; i++) {
+		printf("%d, ", p.payload[i].id);
+	}
+	printf("\n");
+	ackMessage(&p, m.id);
+	printf("Message ids in packets: ");
+	for (i=0; i<p.count; i++) {
+		printf("%d, ", p.payload[i].id);
+	}
+	printf("\n");
 
 	return 0;
 }
