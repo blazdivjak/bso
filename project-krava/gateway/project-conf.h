@@ -2,10 +2,10 @@
 #define PROJECT_CONF_H_
 
 #undef NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE
-#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 2	// 2 4 8 16 32 Hz
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 32	// 2 4 8 16 32 Hz
 
 #undef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC contikimac_driver		// contikimac_driver cxmac_driver nullrdc_driver sicslowmac_driver
+#define NETSTACK_CONF_RDC nullrdc_driver		// contikimac_driver cxmac_driver nullrdc_driver sicslowmac_driver
 // ContikiMAC RDC protocol is more enrgy and throughput efficient the others
 
 #undef NETSTACK_CONF_MAC

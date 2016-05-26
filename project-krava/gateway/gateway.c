@@ -1,5 +1,5 @@
 /*
-*__author: blaz, gregor, gasper__
+*__authors: blaz, gregor, gasper__
 *__date: 2016-04-07__
 *__assigment1__
 */
@@ -13,63 +13,68 @@
 #include "dev/leds.h"
 #include "dev/button-sensor.h"
 #include "dev/i2cmaster.h"  // Include IC driver
+#include "dev/adxl345.h"
 #include "net/rime/rime.h"
 #include "net/rime/mesh.h"
 #include "sys/node-id.h" 
-
 #include "../lib/libmessage.h"
+#include "random.h"
 
 #define UART0_CONF_WITH_INPUT 1
-
-// Commands
 #define CMD_NUMBER_OF_MOTES "NOM"
+#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*360
+#define GATEWAY_ADDRESS 0
+#define MY_ADDRESS_1 0//1
+#define MY_ADDRESS_2 0//1
 
 /*
 Static values
 */
-static uint8_t myAddress = 0;
-static uint16_t mote_addrs[] = {0x0001};
+static uint8_t myAddress_1 = MY_ADDRESS_1;
+static uint8_t myAddress_2 = MY_ADDRESS_2;
+static uint8_t sendFailedCounter = 0;
 
-static struct mesh_conn mesh;
-
-
-
-PROCESS(gateway_main, "Main gateway proces");
-AUTOSTART_PROCESSES(&gateway_main);
-
-static void increase_address(){  
-  linkaddr_t addr;  
-  addr.u8[0] = myAddress;
-  addr.u8[1] = 0;
-  printf("My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
-  uint16_t shortaddr = (addr.u8[0] << 8) + addr.u8[1];
-  cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, NULL);   
-  linkaddr_set_node_addr (&addr);
-  myAddress+=1;
-}
-
-
-static void sent(struct mesh_conn *c)
-{
+/*
+ * Mesh functions
+ */
+static void sent(struct mesh_conn *c) {
   printf("Packet sent\n");
 }
 
-static void timedout(struct mesh_conn *c)
-{
-  printf("Packet timedout\n");
+static void timedout(struct mesh_conn *c) {
+  sendFailedCounter += 1;
+  printf("packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
-	// TODO
-  struct Message msg = decode((char *)packetbuf_dataptr());
-  printMessage(msg);
+	
+  Message m;
+  decode(packetbuf_dataptr(), packetbuf_datalen(), &m);
+  printMessage(&m);
 }
 
-/*---------------------------------------------------------------------------*/
-// callbacks for mesh (must be declared after declaration)
+/*
+* Initialize mesh
+*/
+static struct mesh_conn mesh;
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
-/*---------------------------------------------------------------------------*/
+
+static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){  
+  linkaddr_t addr;
+  addr.u8[0] = myAddress_1;
+  addr.u8[1] = myAddress_2;
+  printf("My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
+  uint16_t shortaddr = (addr.u8[0] << 8) + addr.u8[1];
+  cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, NULL);   
+  linkaddr_set_node_addr (&addr); 
+}
+
+/*
+ * Init process
+ */
+PROCESS(gateway_main, "Main gateway proces");
+AUTOSTART_PROCESSES(&gateway_main);
 
 static struct etimer et;
 PROCESS_THREAD(gateway_main, ev, data)
@@ -80,29 +85,33 @@ PROCESS_THREAD(gateway_main, ev, data)
   uart0_init(BAUD2UBR(115200));
   uart0_set_input(serial_line_input_byte);
 
-  mesh_open(&mesh, 14, &callbacks);  
-  
-  SENSORS_ACTIVATE(button_sensor);
+  /* Set gateway address */
+  setAddress(myAddress_1, myAddress_2);
 
-  // set address
-  increase_address();
-  // myAddress = node_id;
+  /* Start mesh */
+  static struct etimer meshRefreshInterval;
+  etimer_set(&meshRefreshInterval, MESH_REFRESH_INTERVAL);
+  mesh_open(&mesh, 14, &callbacks);
 
   while(1) {    
 
     PROCESS_WAIT_EVENT(); 
-    //set address
-    if(ev == sensors_event && data == &button_sensor){
-    	printf("button\n");
-      increase_address();
+    
+    if(etimer_expired(&meshRefreshInterval)){
+      printf("Closing Mesh\n");
+      mesh_close(&mesh);
+      mesh_open(&mesh, 14, &callbacks);
+      printf("Initializing Mesh\n");      
+      //sendFailedCounter+=10;
+      etimer_reset(&meshRefreshInterval);
     }
+
     if (ev == serial_line_event_message && data != NULL) {
     	printf("received line: %s\n", (char *)data);
       if (!strcmp(CMD_NUMBER_OF_MOTES, data)) {
         printf("get number of motes..\n");
       }
     }
-
 
   }
   PROCESS_END();
