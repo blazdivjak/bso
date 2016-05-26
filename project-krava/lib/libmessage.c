@@ -21,7 +21,7 @@
  * Sets random number to message structure - we can assume the number will be unique in our system
  */
 void setMsgID (struct Message *m) {
-	m->id = (uint16_t) rand();
+	m->id = ((uint16_t) rand()) & 0xFFFE ;	// Krava messages will always have 0 as the last bit, gateway will always have 1
 }
 
 
