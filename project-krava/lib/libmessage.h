@@ -31,6 +31,12 @@ void getMotionArray (struct Message *m, uint8_t *buffer);
 void addNeighbour (struct Message *m, uint8_t neighbour);
 void resetMessage(struct Message *m);
 
+/* send message is used like this:
+* 	static uint8_t buffer[35];
+*	uint8_t size = encodeData(&m, buffer);
+*	packetbuf_copyfrom(buffer, size);   
+*/
+
 uint8_t encodeData(struct Message *m, uint8_t *buffer);
 uint8_t getEncodeDataSize(struct Message *m);
 void printMessage(struct Message *m);
