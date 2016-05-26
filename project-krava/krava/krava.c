@@ -37,6 +37,7 @@ static uint8_t sendFailedCounter = 0;
 
 #define NEIGHBOR_TABLE_REINITIALIZE_INTERVAL (CLOCK_SECOND)*360
 #define NEIGHBOR_SENSE_INTERVAL (CLOCK_SECOND)*5
+#define NEIGHBOR_SENSE_TIME (CLOCK_SECOND)*1
 #define NEIGHBOR_ADVERTISEMENT_INTERVAL (CLOCK_SECOND)*5
 static uint8_t kravaNeighbors[20];
 static uint8_t numberOfNeighbors = 0;
@@ -102,12 +103,21 @@ static void sendMessage(){
 static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 {	
 
-  printf("Neighbor advertisment received from %d.%d: '%s'\n",
-         from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
+  static signed char rss;
+  static signed char rss_val;
+  static signed char rss_offset;	
+  rss_val = packetbuf_attr(PACKETBUF_ATTR_RSSI);
+  rss_offset=-45;
+  rss=rss_val + rss_offset;  
+
+  printf("Neighbor advertisment received from %d.%d: '%s' RSSI: %d\n",
+         from->u8[0], from->u8[1], (char *)packetbuf_dataptr(), rss);
 
   //Add neighbor to current neighbor table if neighbor not in the table yet
   int addNeighborToTable = 1;
   int i;
+
+  //TODO: Check message rssi for adding only close neighbors
   for(i = 0; i<sizeof(kravaNeighbors);i++){
   	if(kravaNeighbors[i]==from->u8[0]){
   		addNeighborToTable = 0;
@@ -272,11 +282,13 @@ PROCESS_THREAD(neighbors, ev, data)
 
 	static struct etimer neighborAdvertismentInterval;
 	static struct etimer neighborSenseInterval;
+	static struct etimer neighborSenseTime;
 	static struct etimer neighborTableRinitializeInterval;
 	etimer_set(&neighborAdvertismentInterval, NEIGHBOR_ADVERTISEMENT_INTERVAL);
 	etimer_set(&neighborSenseInterval, NEIGHBOR_SENSE_INTERVAL);
-	etimer_set(&neighborTableRinitializeInterval, NEIGHBOR_TABLE_REINITIALIZE_INTERVAL);
-		
+	etimer_set(&neighborSenseTime, NEIGHBOR_SENSE_TIME);
+	etimer_set(&neighborTableRinitializeInterval, NEIGHBOR_TABLE_REINITIALIZE_INTERVAL);	
+	uint8_t sensing = 0;	
 	//Process main loop
 	while(1) {
 		PROCESS_WAIT_EVENT();	
@@ -287,12 +299,24 @@ PROCESS_THREAD(neighbors, ev, data)
 			etimer_reset(&neighborTableRinitializeInterval);
 		}
 
-		//sense neighbors for cca 5s
+		//sense neighbors every cca 5s for 1s
 		if(etimer_expired(&neighborSenseInterval)){
-			broadcast_open(&broadcast, 129, &broadcast_call); 			
-    		printf("Sensing for neighbors\n");			
-			etimer_set(&neighborSenseInterval, CLOCK_SECOND * 5 + random_rand() % (CLOCK_SECOND * 5));
-		}						
+			if(sensing==0){
+				broadcast_open(&broadcast, 129, &broadcast_call);
+				printf("Sensing for neighbors\n");								
+				etimer_set(&neighborSenseTime, NEIGHBOR_SENSE_TIME);
+				sensing = 1;
+			}						
+		}
+		//Stop sensing after 1s
+		if(etimer_expired(&neighborSenseTime)){
+			if(sensing == 1){
+				broadcast_close(&broadcast);
+				printf("Sensing stoped\n");					
+				etimer_set(&neighborSenseInterval, NEIGHBOR_SENSE_INTERVAL + random_rand() % (NEIGHBOR_SENSE_INTERVAL));
+				sensing = 0;
+			}						
+		}								
 			
 		//send advertisment to your neighbors every 5s
 		if(etimer_expired(&neighborAdvertismentInterval)){
@@ -300,7 +324,7 @@ PROCESS_THREAD(neighbors, ev, data)
  			packetbuf_copyfrom("Hello I am your neighbor krava", 30);    
     		broadcast_send(&broadcast);
     		printf("Neighbor advertisment sent\n");
-			etimer_set(&neighborAdvertismentInterval, CLOCK_SECOND * 5 + random_rand() % (CLOCK_SECOND * 5));
+			etimer_set(&neighborAdvertismentInterval, NEIGHBOR_SENSE_INTERVAL + random_rand() % (NEIGHBOR_SENSE_INTERVAL));
 			broadcast_close(&broadcast);
 		}				
 	}
