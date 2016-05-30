@@ -7,6 +7,7 @@
 
 #define MAX_NEIGHBOURS 20
 #define BUFFER_MAX_SIZE 5
+#define CMD_BUFFER_MAX_SIZE 3
 // message send array is 128 bytes long
 #define MESSAGE_BYTE_SIZE_MAX 35	// how many bytes a single message can take when completely full
 
