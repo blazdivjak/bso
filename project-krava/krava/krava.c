@@ -51,12 +51,13 @@ static uint8_t numberOfNeighbors = 0;
 
 //message buffer
 static uint8_t send_buffer[MESSAGE_BYTE_SIZE_MAX];
+static uint8_t command_buffer[CMD_BUFFER_MAX_SIZE];
 static int rssiTreshold = RSSI_TRESHOLD;
 Message m; //message we save to
 Message mNew; //new message received for decoding
 Packets myPackets; //list of packets sent and waiting to be acked
 Packets otherKravaPackets; //list of packets sent from other kravas if I am gateway
-// uint8_t iAmGateway; //set to 1 if you are gateway and to 0 if you are only krava
+CmdMsg command;
 
 //Measurement
 #define IIR_STRENGTH 4
@@ -104,8 +105,6 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   	printMessage(&mNew);
 
   	//TODO: If I am gateway add this packets to otherKravaPackets
-
-
   }
   //Gateway command
   else{
@@ -119,10 +118,17 @@ Emergency mode handling
 */
 static void triggerEmergencyTwo(){
 	if (status.emergencyTwo == 1) {
+		
 		return;
 	}
 	status.emergencyTwo = 1;
 	printf("Emergency Two triggered\n");
+
+	setCmdMsgId(&command, 32);
+	command.cmd = CMD_EMERGENCY_TWO;
+	command.target_id = myAddress_1;
+	sendCommand();	
+
 }
 
 static void cancelEmergencyTwo(){
@@ -132,6 +138,10 @@ static void cancelEmergencyTwo(){
 	}
 	printf("Emergency Two canceled\n");
 	status.emergencyTwo = 0;
+	setCmdMsgId(&command, 32);
+	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
+	command.target_id = myAddress_1;
+	sendCommand();		
 }
 
 /*
@@ -164,6 +174,19 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){
 static void setCurrentGateway(uint8_t currentGatewayAddress){
 
 	currentGateway = currentGatewayAddress;
+}
+
+
+void sendCommand(){
+	
+  printf("Sending command to my current gateway ID: %d.0\n", currentGateway);
+    
+  linkaddr_t addr_send;     
+  encodeCmdMsg(&command, &command_buffer);  
+  packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);       
+  addr_send.u8[0] = currentGateway;
+  addr_send.u8[1] = 0;  
+  mesh_send(&mesh, &addr_send);
 }
 
 static void sendMessage(){
