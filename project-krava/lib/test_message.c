@@ -80,5 +80,17 @@ int main()
 	}
 	printf("\n");
 
+
+	printf("\n\nGateway Message\n");
+	GatewayMsg g;
+	setGatewayMsgId(&g, 32);
+	g.cmd = CMD_EMERGENCY_ONE;
+	g.target_id = 6;
+	encodeGatewayMsg(&g, buffer);
+	GatewayMsg g2;
+	decodeGatewayMsg(buffer, &g2);
+	printf("id: %d, cmd: %d, target: %d\n", g2.id, g2.cmd, g2.target_id);
+
+
 	return 0;
 }
