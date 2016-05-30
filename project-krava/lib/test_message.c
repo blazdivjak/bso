@@ -61,7 +61,10 @@ int main()
 
 	printf("Copy Message\n");
 	resetMessage(&mNew);
-	copyMessage(&m, &mNew);
+	printMessage(&mNew);
+	// copyMessage(&m, &mNew);
+	mNew = m;
+	resetMessage(&m);
 	printMessage(&mNew);
 
 	// printf("Reseting all readings \n");

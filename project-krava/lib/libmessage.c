@@ -77,17 +77,6 @@ void resetMessage(struct Message *m) {
 }
 
 
-void copyMessage(struct Message *from, struct Message *to) {
-	to->id = from->id;
-	to->mote_id = from->mote_id;
-	to->temp = from->temp;
-	to->battery = from->battery;
-	to->motionCount = from->motionCount;
-	to->motions = from->motions;
-	to->neighbourCount = from->neighbourCount;
-	memcpy(to->neighbours, from->neighbours, from->neighbourCount); 
-}
-
 /*
  * Encode message struct into int array to be sent
  * buffer passed in has to be at least size MESSAGE_BYTE_SIZE_MAX
