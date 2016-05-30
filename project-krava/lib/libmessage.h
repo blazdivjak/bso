@@ -67,7 +67,7 @@ typedef struct GatewayMsg {
 	uint8_t target_id;
 } GatewayMsg;
 
-void encodeGatewayMsg(struct GatewayMsg *m, uint8_t *buffer);
+void encodeGatewayMsg(struct GatewayMsg *m, uint8_t *buffer);	// Always encodes it to 2 bytes (2 x uint8_t)
 void decodeGatewayMsg(uint8_t * buffer, struct GatewayMsg *m);
 uint8_t setGatewayMsgId(struct GatewayMsg *m, uint8_t id) ;
 

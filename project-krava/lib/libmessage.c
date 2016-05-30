@@ -211,6 +211,7 @@ void ackMessage (struct Packets *p, int messageID) {
 	p->count--;
 }
 
+// Always encodes it to 2 bytes (2 x uint8_t)
 void encodeGatewayMsg(struct GatewayMsg *m, uint8_t *buffer) {
 	buffer[0] = (m->id <<3) + (m->cmd & 0x07);
 	buffer[1] = m->target_id;
