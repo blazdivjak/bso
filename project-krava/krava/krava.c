@@ -29,12 +29,14 @@
 
 //Networking
 #define DEFAULT_GATEWAY_ADDRESS 0 //falback to default gateway if we cant conntact gateway
-#define GATEWAY_ADDRESS 0
+#define CURRENT_GATEWAY_ADDRESS 0
 #define MY_ADDRESS_1 0//1
 #define MY_ADDRESS_2 0//1
 
 static uint8_t myAddress_1 = MY_ADDRESS_1;
 static uint8_t myAddress_2 = MY_ADDRESS_2;
+static uint8_t defaultGateway = DEFAULT_GATEWAY_ADDRESS;
+static uint8_t currentGateway = CURRENT_GATEWAY_ADDRESS;
 static uint8_t sendFailedCounter = 0;
 
 //Neighbors
@@ -49,8 +51,11 @@ static uint8_t numberOfNeighbors = 0;
 //message buffer
 static uint8_t send_buffer[MESSAGE_BYTE_SIZE_MAX];
 static int rssiTreshold = RSSI_TRESHOLD;
-Message m;
-Message mNew;
+Message m; //message we save to
+Message mNew; //new message received for decoding
+Packets myPackets; //list of packets sent and waiting to be acked
+Packets otherKravaPackets; //list of packets sent from other kravas if I am gateway
+uint8_t iAmGateway; //set to 1 if you are gateway and to 0 if you are only krava
 
 /*
 * Mesh functions
@@ -68,17 +73,42 @@ static void timedout(struct mesh_conn *c)
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
-
-  //TODO: Check received packet type if it is ACK remove packet from SENT PACKET QUEUE
-  		 
-  printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
-  if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
+   
+  //printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  
+  //ACK
+  if(packetbuf_datalen()==1){
+  	printf("Message ID: %d ACK received.\n", (uint8_t *)packetbuf_dataptr());
+  	ackMessage(&myPackets, (uint8_t *)packetbuf_dataptr());
+  }
+  //Krava message
+  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
   	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &mNew);
   	printMessage(&mNew);
-  }else{
-  	printf("TODO this is probably message from gateway :)\n");
+
+  	//TODO: If I am gateway add this packets to otherKravaPackets
+
+
+  }
+  //Gateway command
+  else{
+  	printf("TODO this is probably command from gateway :)\n");
   	printf("Messaage from gateway: %s", packetbuf_dataptr());
   }    
+}
+
+/*
+Emergency mode handling
+*/
+static void triggerEmergencyTwo(){
+
+}
+
+/*
+Gateway command handling
+*/
+static void handleCommand(){
+
 }
 
 /*
@@ -101,18 +131,28 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){
   linkaddr_set_node_addr (&addr);	
 }
 
+static void setCurrentGateway(uint8_t currentGatewayAddress){
+
+	currentGateway = currentGatewayAddress;
+}
+
 static void sendMessage(){
-  
-  printf("Sending message to my current gateway ID: %d.0\n", GATEWAY_ADDRESS);
+	
+  printf("Sending message to my current gateway ID: %d.0\n", currentGateway);
 
   setMsgID(&m);
+  
+  //Copy message  
+  addMessage(&myPackets, &m);
+
+  //TODO: Poslji komplet pakete
 
   linkaddr_t addr_send; 
   //char msg[2] = {1, 2};
   //packetbuf_copyfrom(msg, 2);
-  uint8_t size = encodeData(&m, send_buffer);
+  uint8_t size = encodeData(&m, &send_buffer);
   packetbuf_copyfrom(send_buffer, size);       
-  addr_send.u8[0] = GATEWAY_ADDRESS;
+  addr_send.u8[0] = currentGateway;
   addr_send.u8[1] = 0;
   //printf("Mesh status: %d\n", mesh_ready(&mesh));
   mesh_send(&mesh, &addr_send);
@@ -187,7 +227,6 @@ int readRSSI(){
 PROCESS(krava, "Krava");
 PROCESS(communication, "Communication");
 PROCESS(neighbors, "Sense neigbors");
-//AUTOSTART_PROCESSES(&krava, &communication, &neighbors);
 AUTOSTART_PROCESSES(&krava, &communication, &neighbors);
 /*
 * Krava process
@@ -247,7 +286,8 @@ PROCESS_THREAD(communication, ev, data)
 	PROCESS_BEGIN();
 	resetMessage(&m);
 	printf("Communication process\n");	
-	setAddress(node_id, myAddress_2);		
+	setAddress(node_id, myAddress_2);
+	setCurrentGateway(defaultGateway);
 		
 	static struct etimer sendInterval;
 	static struct etimer meshRefreshInterval;	
