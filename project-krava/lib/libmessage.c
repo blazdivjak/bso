@@ -179,7 +179,7 @@ void resetPackets (struct Packets *p) {
 /*
  * Add Message to Packets buffer
  */
-void addMessage (struct Packets *p, struct Message message) {
+void addMessage (struct Packets *p, struct Message *message) {
 	// if the packets buffer is full ditch the last packet to make room for new one
 	if (p->count == BUFFER_MAX_SIZE) {
 		uint8_t i;
@@ -188,7 +188,7 @@ void addMessage (struct Packets *p, struct Message message) {
 		}
 		p->count--;
 	}
-	p->payload[p->count] = message;
+	p->payload[p->count] = *message;
 	p->count++;
 }
 
@@ -196,7 +196,7 @@ void addMessage (struct Packets *p, struct Message message) {
 /*
  * Removes Message structure from Packets buffer
  */
-void ackMessage (struct Packets *p, int messageID) {
+void ackMessage (struct Packets *p, uint16_t messageID) {
 	uint8_t i;
 	for (i = 0; i < p->count; i += 1) {
 		if (p->payload[i].id == messageID) {
@@ -214,18 +214,18 @@ void ackMessage (struct Packets *p, int messageID) {
 }
 
 // Always encodes it to 2 bytes (2 x uint8_t)
-void encodeGatewayMsg(struct CmdMsg *m, uint8_t *buffer) {
+void encodeCmdMsg(struct CmdMsg *m, uint8_t *buffer) {
 	buffer[0] = (m->id <<3) + (m->cmd & 0x07);
 	buffer[1] = m->target_id;
 }
 
-void decodeGatewayMsg(uint8_t * buffer, struct CmdMsg *m) {
+void decodeCmdMsg(uint8_t * buffer, struct CmdMsg *m) {
 	m->id = (buffer[0] >> 3) & 0x1F;
 	m->cmd = buffer[0] & 0x07;
 	m->target_id = buffer[1];
 }
 
-uint8_t setGatewayMsgId(struct CmdMsg *m, uint8_t id) {
+uint8_t setCmdMsgId(struct CmdMsg *m, uint8_t id) {
 	if (id > 31) {
 		m->id = 0;
 	} else {
@@ -233,4 +233,18 @@ uint8_t setGatewayMsgId(struct CmdMsg *m, uint8_t id) {
 	}
 
 	return m->id;
+}
+
+void printCmdMsg(struct CmdMsg *m) {
+	if (m->cmd == CMD_SET_LOCAL_GW) {
+		printf("Set Local gateway command: ");
+	} else if (m->cmd == CMD_QUERY_MOTE) {
+		printf("Query mote command: ");
+	} else if (m->cmd == CMD_EMERGENCY_ONE) {
+		printf("Emergency mode 1: ");
+	} else if (m->cmd == CMD_EMERGENCY_TWO) {
+		printf("Emergency mode 2: ");
+	}
+	printf("Message ID = %d ", m->id);
+	printf("Target ID = %d\n", m->target_id);
 }

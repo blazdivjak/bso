@@ -62,9 +62,7 @@ int main()
 	printf("Copy Message\n");
 	resetMessage(&mNew);
 	printMessage(&mNew);
-	// copyMessage(&m, &mNew);
 	mNew = m;
-	resetMessage(&m);
 	printMessage(&mNew);
 
 	// printf("Reseting all readings \n");
@@ -74,9 +72,9 @@ int main()
 	printf("\n\nPackets...\n");
 	Packets p;
 	resetPackets(&p);
-	addMessage(&p, m);
+	addMessage(&p, &m);
 	mNew.id++;
-	addMessage(&p, mNew);
+	addMessage(&p, &mNew);
 	printf("Message ids in packets: ");
 	for (i=0; i<p.count; i++) {
 		printf("%d, ", p.payload[i].id);
@@ -92,13 +90,13 @@ int main()
 
 	printf("\n\nGateway Message\n");
 	CmdMsg g;
-	setGatewayMsgId(&g, 32);
+	setCmdMsgId(&g, 32);
 	g.cmd = CMD_EMERGENCY_ONE;
 	g.target_id = 6;
-	encodeGatewayMsg(&g, buffer);
+	encodeCmdMsg(&g, buffer);
 	CmdMsg g2;
-	decodeGatewayMsg(buffer, &g2);
-	printf("id: %d, cmd: %d, target: %d\n", g2.id, g2.cmd, g2.target_id);
+	decodeCmdMsg(buffer, &g2);
+	printCmdMsg(&g2);
 
 
 	return 0;

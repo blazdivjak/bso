@@ -57,8 +57,8 @@ typedef struct Packets {
 } Packets;
 
 void resetPackets (struct Packets *p);
-void addMessage (struct Packets *p, struct Message message);
-void ackMessage (struct Packets *p, int messageID);
+void addMessage (struct Packets *p, struct Message *message);
+void ackMessage (struct Packets *p, uint16_t messageID);
 
 
 typedef struct CmdMsg {
@@ -67,8 +67,9 @@ typedef struct CmdMsg {
 	uint8_t target_id;
 } CmdMsg;
 
-void encodeGatewayMsg(struct CmdMsg *m, uint8_t *buffer);	// Always encodes it to 2 bytes (2 x uint8_t)
-void decodeGatewayMsg(uint8_t * buffer, struct CmdMsg *m);
-uint8_t setGatewayMsgId(struct CmdMsg *m, uint8_t id) ;
+void encodeCmdMsg(struct CmdMsg *m, uint8_t *buffer);	// Always encodes it to 2 bytes (2 x uint8_t)
+void decodeCmdMsg(uint8_t * buffer, struct CmdMsg *m);
+uint8_t setCmdMsgId(struct CmdMsg *m, uint8_t id);
+void printCmdMsg(struct CmdMsg *m);
 
 #endif
