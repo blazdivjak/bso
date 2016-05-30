@@ -10,7 +10,7 @@
 // message send array is 128 bytes long
 #define MESSAGE_BYTE_SIZE_MAX 35	// how many bytes a single message can take when completely full
 
-//Gateway commands - all have to be odd numbers for the last bit to be 1
+// Commands - all have to be odd numbers for the last bit to be 1
 #define CMD_SET_LOCAL_GW	1	// Set local group gateway. target_id = address of the new local gateway
 #define CMD_QUERY_MOTE 		3   	// Send status query to a specific mote
 #define CMD_EMERGENCY_ONE	5	// Mote unreachable for more than 10sec. target_id is the address of unreachable mote
@@ -61,14 +61,14 @@ void addMessage (struct Packets *p, struct Message message);
 void ackMessage (struct Packets *p, int messageID);
 
 
-typedef struct GatewayMsg {
+typedef struct CmdMsg {
 	uint8_t cmd;
 	uint8_t id;
 	uint8_t target_id;
-} GatewayMsg;
+} CmdMsg;
 
-void encodeGatewayMsg(struct GatewayMsg *m, uint8_t *buffer);	// Always encodes it to 2 bytes (2 x uint8_t)
-void decodeGatewayMsg(uint8_t * buffer, struct GatewayMsg *m);
-uint8_t setGatewayMsgId(struct GatewayMsg *m, uint8_t id) ;
+void encodeGatewayMsg(struct CmdMsg *m, uint8_t *buffer);	// Always encodes it to 2 bytes (2 x uint8_t)
+void decodeGatewayMsg(uint8_t * buffer, struct CmdMsg *m);
+uint8_t setGatewayMsgId(struct CmdMsg *m, uint8_t id) ;
 
 #endif
