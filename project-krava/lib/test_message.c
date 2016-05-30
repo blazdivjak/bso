@@ -59,6 +59,11 @@ int main()
 	decode(buffer, size, &mNew);
 	printMessage(&mNew);
 
+	printf("Copy Message\n");
+	resetMessage(&mNew);
+	copyMessage(&m, &mNew);
+	printMessage(&mNew);
+
 	// printf("Reseting all readings \n");
 	// m = resetMessage(m);
 	// printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);

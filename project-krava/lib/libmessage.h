@@ -36,6 +36,7 @@ void addMotion (struct Message *m, uint8_t motion);
 void getMotionArray (struct Message *m, uint8_t *buffer);
 void addNeighbour (struct Message *m, uint8_t neighbour);
 void resetMessage(struct Message *m);
+void copyMessage(struct Message *from, struct Message *to);
 
 /* send message is used like this:
 * 	static uint8_t buffer[35];
