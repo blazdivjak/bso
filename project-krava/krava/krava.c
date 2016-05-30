@@ -56,15 +56,23 @@ Message m; //message we save to
 Message mNew; //new message received for decoding
 Packets myPackets; //list of packets sent and waiting to be acked
 Packets otherKravaPackets; //list of packets sent from other kravas if I am gateway
-uint8_t iAmGateway; //set to 1 if you are gateway and to 0 if you are only krava
+// uint8_t iAmGateway; //set to 1 if you are gateway and to 0 if you are only krava
 
 //Measurement
 #define IIR_STRENGTH 4
 #define MOVEMENT_COUNTER_VAL 2
+#define RUNNING_MAX 5
 #define WALKING_TRESHOLD 100000
 #define RUNNING_TRESHOLD 200000
 static int64_t average_movement = 70000;
 static uint8_t movement_counter = 0;
+static uint8_t running_counter = 0;
+
+struct {
+	unsigned char iAmGateway : 1;
+	unsigned char emergencyOne : 1;
+	unsigned char emergencyTwo : 1;
+} status;
 
 /*
 * Mesh functions
@@ -110,7 +118,20 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
 Emergency mode handling
 */
 static void triggerEmergencyTwo(){
+	if (status.emergencyTwo == 1) {
+		return;
+	}
+	status.emergencyTwo = 1;
+	printf("Emergency Two triggered\n");
+}
 
+static void cancelEmergencyTwo(){
+	running_counter = 0;
+	if (status.emergencyTwo == 0) {
+		return;
+	}
+	printf("Emergency Two canceled\n");
+	status.emergencyTwo = 0;
 }
 
 /*
@@ -221,12 +242,21 @@ void readMovement(){
 	    if (average_movement < WALKING_TRESHOLD) {
 	    	addMotion(&m, STANDING);
 	    	printf("Standing \t");
+	    	cancelEmergencyTwo();
 	    } else if (average_movement < RUNNING_TRESHOLD) {
 	    	addMotion(&m, WALKING);
 	    	printf("Walking \t");
+	    	cancelEmergencyTwo();
 	    } else {
 	    	addMotion(&m, RUNNING);
 	    	printf("Running \t");
+	    	if (running_counter != 0xFF) {
+	    		running_counter++;
+	    	}
+	    }
+
+	    if (running_counter >= RUNNING_MAX) {
+	    	triggerEmergencyTwo();
 	    }
 
 	    printf("Acce: %" PRId64 "\tAvg: %" PRId64 "\n", acc, average_movement);
@@ -266,6 +296,9 @@ PROCESS_THREAD(krava, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 	printf("Sensor sensing process\n");
+	status.iAmGateway = 0;
+	status.emergencyOne = 0;
+	status.emergencyTwo = 0;
 
 	//Initialize timers for intervals
 	static struct etimer movementReadInterval;
