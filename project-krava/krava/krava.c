@@ -123,17 +123,17 @@ Handle gateway commands
 void handleCommand(CmdMsg *command) {
   
   if (command->cmd == CMD_SET_LOCAL_GW) {
-    printf("Command: Set local gateway: %d", command->target_id);
+    printf("Command: Set local gateway: %d\n", command->target_id);
   }else if (command->cmd == CMD_QUERY_MOTE) {
-    printf("Command: Query from gateway: %d", command->target_id);
+    printf("Command: Query from gateway: %d\n", command->target_id);
   }else if (command->cmd == CMD_EMERGENCY_ONE) {
-    printf("Emergency one, cow unreachable id: %d", command->target_id);
+    printf("Emergency one, cow unreachable id: %d\n", command->target_id);
   } else if (command->cmd == CMD_EMERGENCY_TWO) {
-    printf("Emergency two, cow running id: %d", command->target_id);
+    printf("Emergency two, cow running id: %d\n", command->target_id);
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
-    printf("Emergency one cancel, cow id: %d", command->target_id);
+    printf("Emergency one cancel, cow id: %d\n", command->target_id);
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
-    printf("Emergency two cancel, cow id: %d", command->target_id);
+    printf("Emergency two cancel, cow id: %d\n", command->target_id);
   }
 }
 
@@ -150,9 +150,8 @@ static void triggerEmergencyTwo(){
 
 	setCmdMsgId(&command, 32);
 	command.cmd = CMD_EMERGENCY_TWO;
-	command.target_id = myAddress_1;
+	command.target_id = m.mote_id;
 	sendCommand();	
-
 }
 
 static void cancelEmergencyTwo(){
@@ -164,7 +163,7 @@ static void cancelEmergencyTwo(){
 	status.emergencyTwo = 0;
 	setCmdMsgId(&command, 32);
 	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
-	command.target_id = myAddress_1;
+	command.target_id = m.mote_id;
 	sendCommand();		
 }
 
@@ -281,15 +280,15 @@ void readMovement(){
     if (movement_counter%MOVEMENT_COUNTER_VAL == 0) {
 	    if (average_movement < WALKING_TRESHOLD) {
 	    	addMotion(&m, STANDING);
-	    	printf("Standing \t");
+	    	//printf("Standing \t");
 	    	cancelEmergencyTwo();
 	    } else if (average_movement < RUNNING_TRESHOLD) {
 	    	addMotion(&m, WALKING);
-	    	printf("Walking \t");
+	    	//printf("Walking \t");
 	    	cancelEmergencyTwo();
 	    } else {
 	    	addMotion(&m, RUNNING);
-	    	printf("Running \t");
+	    	//printf("Running \t");
 	    	if (running_counter != 0xFF) {
 	    		running_counter++;
 	    	}
@@ -299,7 +298,7 @@ void readMovement(){
 	    	triggerEmergencyTwo();
 	    }
 
-	    printf("Acce: %" PRId64 "\tAvg: %" PRId64 "\n", acc, average_movement);
+	    //printf("Acce: %" PRId64 "\tAvg: %" PRId64 "\n", acc, average_movement);
 	}
 	movement_counter++;
 
