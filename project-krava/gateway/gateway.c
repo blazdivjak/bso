@@ -86,6 +86,21 @@ static void cows_find_missing() {
   cows_missing = cows_registered ^ cows_in_range;
 }
 
+void handleCommand(CmdMsg *command) {
+  
+  if (command->cmd == CMD_EMERGENCY_ONE) {
+    printf("Emergency one, cow unreachable id: %d", command->target_id);
+  } else if (command->cmd == CMD_EMERGENCY_TWO) {
+    printf("Emergency two, cow running id: %d", command->target_id);
+  } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
+    printf("Emergency one cancel, cow id: %d", command->target_id);
+  } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
+    printf("Emergency two cancel, cow id: %d", command->target_id);
+  } 
+
+}
+
+
 /*
 * Initialize mesh
 */
@@ -103,19 +118,38 @@ static void timedout(struct mesh_conn *c) {
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
 	
-  // if sent to me? and the message format is right ...
-  Message m;
-  decode(packetbuf_dataptr(), packetbuf_datalen(), &m);
-  printMessage(&m);
-  packetbuf_copyfrom(&m.id, 1);
-  mesh_send(&mesh, from);
 
-  // save how many cows are in range
-  cows_in_range |= 1 << m.mote_id;
-  cows_missing = cows_registered ^ cows_in_range;
-  //printf("Cows registered with gateway: %s\n", byte_to_binary(cows_in_range));
+  //ACK
+  if(packetbuf_datalen()==1){
+    printf("Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
+    ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
+  }
+  //Krava message
+  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
+    // if sent to me? and the message format is right ...
+    Message m;
+    decode(packetbuf_dataptr(), packetbuf_datalen(), &m);
+    printMessage(&m);
+    packetbuf_copyfrom(&m.id, 1);
+    mesh_send(&mesh, from);
+
+    // save how many cows are in range
+    cows_in_range |= 1 << m.mote_id;
+    cows_missing = cows_registered ^ cows_in_range;
+    //printf("Cows registered with gateway: %s\n", byte_to_binary(cows_in_range));
+  }
+  // Command
+  else{
+    printf("TODO this is probably command from gateway :)\n");
+
+    CmdMsg command;
+    decodeCmdMsg(packetbuf_dataptr(), &command);
+    handleCommand(&command);
+  }  
 
 }
+
+
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 
 /*
