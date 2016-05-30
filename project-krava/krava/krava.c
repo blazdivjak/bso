@@ -74,11 +74,11 @@ static void timedout(struct mesh_conn *c)
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
    
-  //printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
   
   //ACK
   if(packetbuf_datalen()==1){
-  	printf("Message ID: %d ACK received.\n", (uint8_t *)packetbuf_dataptr());
+  	printf("Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
   	ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
   }
   //Krava message
