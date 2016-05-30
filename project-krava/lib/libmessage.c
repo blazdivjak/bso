@@ -224,7 +224,7 @@ void encodeCmdMsg(struct CmdMsg *m, uint8_t *buffer) {
 void decodeCmdMsg(uint8_t * buffer, struct CmdMsg *m) {
 	m->cmd = buffer[0];
 	m->id = buffer[1];
-	m->target_id = buffer[1];
+	m->target_id = buffer[2];
 }
 
 uint8_t setCmdMsgId(struct CmdMsg *m, uint8_t id) {
