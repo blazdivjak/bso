@@ -29,6 +29,7 @@
 #define MY_ADDRESS_2 0//1
 #define MAX_NUMBER_OF_COWS 32
 #define NUMBER_OF_COWS 3
+#define COW_MISSING_INTERVAL (CLOCK_SECOND)*30
 // exceptions
 #define TRY do{ jmp_buf ex_buf__; if( !setjmp(ex_buf__) ){
 #define CATCH } else {
@@ -80,6 +81,11 @@ static uint32_t cows_registration() {
   return r;
 }
 
+// check if any of the cows went out of range
+static void cows_find_missing() {
+  cows_missing = cows_registered ^ cows_in_range;
+}
+
 /*
 * Initialize mesh
 */
@@ -106,6 +112,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
 
   // save how many cows are in range
   cows_in_range |= 1 << m.mote_id;
+  cows_missing = cows_registered ^ cows_in_range;
   //printf("Cows registered with gateway: %s\n", byte_to_binary(cows_in_range));
 
 }
@@ -143,6 +150,9 @@ PROCESS_THREAD(gateway_main, ev, data)
   setAddress(myAddress_1, myAddress_2);
   /* Register cows into bitmap */
   cows_registered = cows_registration();
+  /* Set timer to refresh the missing cow interval*/
+  static struct etimer cows_missing_interval;
+  etimer_set(&cows_missing_interval, COW_MISSING_INTERVAL);
 
   /* Start mesh */
   static struct etimer meshRefreshInterval;
@@ -160,6 +170,10 @@ PROCESS_THREAD(gateway_main, ev, data)
       printf("Initializing Mesh\n");      
       //sendFailedCounter+=10;
       etimer_reset(&meshRefreshInterval);
+    }
+    if(etimer_expired(&cows_missing_interval)){
+      cows_find_missing();
+      etimer_reset(&cows_missing_interval);
     }
 
     if (ev == serial_line_event_message && data != NULL) {
