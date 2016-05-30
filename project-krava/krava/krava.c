@@ -210,15 +210,15 @@ void readMovement(){
 }
 int readRSSI(){
 		
-  static signed char rssi;
-  static signed char rss_val;  
-  static signed char rss_offset;
-  rss_val = packetbuf_attr(PACKETBUF_ATTR_RSSI);
-  //rss_val = (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI);  
-  rss_offset=-45;
-  rssi=rss_val + rss_offset;   
+  // static signed char rssi;
+  // static signed char rss_val;  
+  // static signed char rss_offset;
+  // rss_val = packetbuf_attr(PACKETBUF_ATTR_RSSI);
+  // rss_val = (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI);  
+  // rss_offset=-45;
+  // rssi=rss_val + rss_offset;   
 
-  return rssi;
+  return packetbuf_attr(PACKETBUF_ATTR_RSSI) - 45;
 }
 
 /*
