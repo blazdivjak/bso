@@ -15,7 +15,8 @@
 #define CMD_QUERY_MOTE 		3   // Send status query to a specific mote
 #define CMD_EMERGENCY_ONE	5	// Mote unreachable for more than 10sec. target_id is the address of unreachable mote
 #define CMD_EMERGENCY_TWO	7	// Cow is running for more than 5sec, other motes should report fine grained RSSI data to that cow. target_id is address of running cow
-
+#define CMD_CANCEL_EMERGENCY_ONE 9
+#define CMD_CANCEL_EMERGENCY_TWO 11
 // Motion values
 #define STANDING 0
 #define WALKING 1
@@ -72,7 +73,7 @@ typedef struct CmdMsg {
 	uint8_t target_id;
 } CmdMsg;
 
-void encodeCmdMsg(struct CmdMsg *m, uint8_t *buffer);	// Always encodes it to 2 bytes (2 x uint8_t)
+void encodeCmdMsg(struct CmdMsg *m, uint8_t *buffer);	// Always encodes it to 3 bytes (2 x uint8_t)
 void decodeCmdMsg(uint8_t * buffer, struct CmdMsg *m);
 uint8_t setCmdMsgId(struct CmdMsg *m, uint8_t id);
 void printCmdMsg(struct CmdMsg *m);
