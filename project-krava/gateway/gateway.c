@@ -107,7 +107,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   Message m;
   decode(packetbuf_dataptr(), packetbuf_datalen(), &m);
   printMessage(&m);
-  packetbuf_copyfrom(&m.id, 2);
+  packetbuf_copyfrom(&m.id, 1);
   mesh_send(&mesh, from);
 
   // save how many cows are in range

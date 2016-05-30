@@ -21,7 +21,7 @@
  * Sets random number to message structure - we can assume the number will be unique in our system
  */
 void setMsgID (struct Message *m) {
-	m->id = ((uint16_t) rand()) & 0xFFFE ;	// Krava messages will always have 0 as the last bit, gateway will always have 1
+	m->id = ((uint8_t) rand()) & 0xFE ;	// Krava messages will always have 0 as the last bit, gateway will always have 1
 }
 
 
@@ -86,7 +86,7 @@ uint8_t encodeData(struct Message *m, uint8_t *buffer) {
 
 	int8_t i = 0, j = 0;
 	buffer[j++] = (uint8_t)((m->id) & 0xFF);
-	buffer[j++] = (uint8_t)(((m->id) & 0xFF00)>>8);
+	//buffer[j++] = (uint8_t)(((m->id) & 0xFF00)>>8);
 	buffer[j++] = m->mote_id;
 	buffer[j++] = m->temp;
 	buffer[j++] = m->battery;
@@ -112,7 +112,7 @@ uint8_t encodeData(struct Message *m, uint8_t *buffer) {
  * Returns encoded data size (size of int array)
  */
 uint8_t getEncodeDataSize(struct Message *m) {
-	return 7 + m->neighbourCount + (m->motionCount>>2) + ((m->motionCount & 0x03) == 0 ? 0 : 1);
+	return 6 + m->neighbourCount + (m->motionCount>>2) + ((m->motionCount & 0x03) == 0 ? 0 : 1);
 }
 
 /*
@@ -148,7 +148,8 @@ void decode(uint8_t * buffer, uint8_t buffer_len, struct Message *m)
 {
 	int8_t i = 0, j = 0;
 
-	m->id = buffer[j++] + (buffer[j++]<<8);
+	// m->id = buffer[j++] + (buffer[j++]<<8);
+	m->id = buffer[j++];
 	m->mote_id = buffer[j++];
 	m->temp = buffer[j++];
 	m->battery = buffer[j++];
@@ -196,7 +197,7 @@ void addMessage (struct Packets *p, struct Message *message) {
 /*
  * Removes Message structure from Packets buffer
  */
-void ackMessage (struct Packets *p, uint16_t messageID) {
+void ackMessage (struct Packets *p, uint8_t messageID) {
 	uint8_t i;
 	for (i = 0; i < p->count; i += 1) {
 		if (p->payload[i].id == messageID) {

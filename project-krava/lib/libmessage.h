@@ -21,7 +21,7 @@
  * data over network
  */
 typedef struct Message {
-	uint16_t id;			// message ID
+	uint8_t id;			// message ID
 	uint8_t mote_id;		// mote ID
 	int8_t temp;			// current mote temp
 	uint8_t battery;		//current mote battery level	
@@ -58,7 +58,7 @@ typedef struct Packets {
 
 void resetPackets (struct Packets *p);
 void addMessage (struct Packets *p, struct Message *message);
-void ackMessage (struct Packets *p, uint16_t messageID);
+void ackMessage (struct Packets *p, uint8_t messageID);
 
 
 typedef struct CmdMsg {
