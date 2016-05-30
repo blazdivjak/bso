@@ -57,7 +57,7 @@ void ackMessage (struct Packets *p, int messageID);
 
 typedef struct GatewayMsg {
 	uint8_t cmd;
-	uint8_t msg_id;
+	uint8_t id;
 	uint8_t target_id;
 	uint8_t target_id2;
 } GatewayMsg;

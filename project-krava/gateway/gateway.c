@@ -19,6 +19,7 @@
 #include "sys/node-id.h" 
 #include "../lib/libmessage.h"
 #include "random.h"
+#include <setjmp.h>  // exceptions
 
 #define UART0_CONF_WITH_INPUT 1
 #define CMD_NUMBER_OF_MOTES "NOM"
@@ -26,6 +27,13 @@
 #define GATEWAY_ADDRESS 0
 #define MY_ADDRESS_1 0//1
 #define MY_ADDRESS_2 0//1
+#define MAX_NUMBER_OF_COWS 32
+#define NUMBER_OF_COWS 3
+// exceptions
+#define TRY do{ jmp_buf ex_buf__; if( !setjmp(ex_buf__) ){
+#define CATCH } else {
+#define ETRY } }while(0)
+#define THROW longjmp(ex_buf__, 1)
 
 /*
 Static values
@@ -33,6 +41,44 @@ Static values
 static uint8_t myAddress_1 = MY_ADDRESS_1;
 static uint8_t myAddress_2 = MY_ADDRESS_2;
 static uint8_t sendFailedCounter = 0;
+static uint32_t cows_registered = 0;
+static uint32_t cows_in_range = 0;
+static uint32_t cows_missing = 0;
+static int register_cows[NUMBER_OF_COWS] = {1, 2, 3};
+
+/*
+ * Functions for cattle management
+ */
+// converts uint32_t to string where number is represented in binary
+static char *byte_to_binary(uint32_t x) {
+  static char b[33];
+  b[0] = '\0';
+  uint32_t z;
+  for (z = 0x80000000; z > 0; z >>= 1) {
+    strcat(b, ((x & z) == z) ? "1" : "0");
+  }
+  return b;
+}
+
+// count number of booleans activated in number
+static int count_cows(uint32_t x){
+  int c = 0;
+  uint32_t z;
+  for (z = 0x80000000; z > 0; z >>= 1) {
+    c += ((x & z) == z) ? 1 : 0;
+  }
+  return c;
+}
+
+// register cows into cows_registered number
+static uint32_t cows_registration() {
+  uint32_t r = 0;
+  int i;
+  for (i = 0; i < NUMBER_OF_COWS; i ++){
+    r |= 1 << register_cows[i];
+  }
+  return r;
+}
 
 /*
 * Initialize mesh
@@ -55,11 +101,13 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   Message m;
   decode(packetbuf_dataptr(), packetbuf_datalen(), &m);
   printMessage(&m);
-  
-  //uint16_t message_id = m->id;
-
-  packetbuf_copyfrom(m.id, 2);
+  packetbuf_copyfrom(&m.id, 2);
   mesh_send(&mesh, from);
+
+  // save how many cows are in range
+  cows_in_range |= 1 << m.mote_id;
+  //printf("Cows registered with gateway: %s\n", byte_to_binary(cows_in_range));
+
 }
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 
@@ -93,6 +141,8 @@ PROCESS_THREAD(gateway_main, ev, data)
 
   /* Set gateway address */
   setAddress(myAddress_1, myAddress_2);
+  /* Register cows into bitmap */
+  cows_registered = cows_registration();
 
   /* Start mesh */
   static struct etimer meshRefreshInterval;
@@ -115,7 +165,17 @@ PROCESS_THREAD(gateway_main, ev, data)
     if (ev == serial_line_event_message && data != NULL) {
     	printf("received line: %s\n", (char *)data);
       if (!strcmp(CMD_NUMBER_OF_MOTES, data)) {
-        printf("get number of motes..\n");
+        printf("Counting cows:\n    %2d %16s %s \n    %2d %16s %s \n    %2d %16s %s \n",
+          count_cows(cows_registered),
+          "cows registered",
+          byte_to_binary(cows_registered),
+          count_cows(cows_in_range),
+          "cows in range",
+          byte_to_binary(cows_in_range),
+          count_cows(cows_missing),
+          "cows missing",
+          byte_to_binary(cows_missing)
+        );
       }
     }
 

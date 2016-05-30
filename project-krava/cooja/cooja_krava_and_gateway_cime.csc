@@ -82,8 +82,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>90.55682638041607</x>
-        <y>18.559810826330924</y>
+        <x>97.96222272142981</x>
+        <y>28.557095886699443</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -130,13 +130,17 @@
         org.contikios.cooja.mspmote.interfaces.MspMoteID
         <id>4</id>
       </interface_config>
+      <interface_config>
+        org.contikios.cooja.mspmote.interfaces.MspDefaultSerial
+        <history>NOM~;NUM~;NOM~;</history>
+      </interface_config>
       <motetype_identifier>z12</motetype_identifier>
     </mote>
   </simulation>
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>4</z>
+    <z>0</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -152,7 +156,7 @@
       <viewport>2.7007332327687683 0.0 0.0 2.7007332327687683 36.87051521920381 70.26845799331517</viewport>
     </plugin_config>
     <width>400</width>
-    <z>0</z>
+    <z>2</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -166,7 +170,7 @@
     </plugin_config>
     <width>1520</width>
     <z>3</z>
-    <height>240</height>
+    <height>719</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
   </plugin>
@@ -183,7 +187,7 @@
       <zoomfactor>500.0</zoomfactor>
     </plugin_config>
     <width>1920</width>
-    <z>2</z>
+    <z>4</z>
     <height>166</height>
     <location_x>0</location_x>
     <location_y>934</location_y>
@@ -195,10 +199,23 @@
       <decorations>true</decorations>
     </plugin_config>
     <width>1240</width>
-    <z>1</z>
+    <z>5</z>
     <height>160</height>
     <location_x>680</location_x>
     <location_y>0</location_y>
+  </plugin>
+  <plugin>
+    org.contikios.cooja.plugins.MoteInterfaceViewer
+    <mote_arg>3</mote_arg>
+    <plugin_config>
+      <interface>Serial port</interface>
+      <scrollpos>0,0</scrollpos>
+    </plugin_config>
+    <width>791</width>
+    <z>1</z>
+    <height>435</height>
+    <location_x>1112</location_x>
+    <location_y>76</location_y>
   </plugin>
 </simconf>
 
