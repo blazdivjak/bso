@@ -73,6 +73,8 @@ struct {
 	unsigned char iAmGateway : 1;
 	unsigned char emergencyOne : 1;
 	unsigned char emergencyTwo : 1;
+	unsigned char systemEmergencyOne : 1;
+	unsigned char systemEmergencyTwo : 1;
 } status;
 
 /*
@@ -329,6 +331,8 @@ PROCESS_THREAD(krava, ev, data)
 	status.iAmGateway = 0;
 	status.emergencyOne = 0;
 	status.emergencyTwo = 0;
+	status.systemEmergencyOne = 0;
+	status.systemEmergencyTwo = 0;
 
 	//Initialize timers for intervals
 	static struct etimer movementReadInterval;
