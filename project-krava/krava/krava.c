@@ -79,7 +79,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   //ACK
   if(packetbuf_datalen()==1){
   	printf("Message ID: %d ACK received.\n", (uint8_t *)packetbuf_dataptr());
-  	ackMessage(&myPackets, (uint8_t *)packetbuf_dataptr());
+  	ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
   }
   //Krava message
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
