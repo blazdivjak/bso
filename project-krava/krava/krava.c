@@ -77,6 +77,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   	printMessage(&mNew);
   }else{
   	printf("TODO this is probably message from gateway :)\n");
+  	printf("Messaage from gateway: %s", packetbuf_dataptr());
   }    
 }
 
