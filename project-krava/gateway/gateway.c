@@ -50,7 +50,7 @@ static int register_cows[NUMBER_OF_COWS] = {1, 2, 3};
  * Functions for cattle management
  */
 // converts uint32_t to string where number is represented in binary
-static char *byte_to_binary(uint32_t x) {
+static char * byte_to_binary(uint32_t x) {
   static char b[33];
   b[0] = '\0';
   uint32_t z;
@@ -86,7 +86,7 @@ static uint32_t cows_registration() {
 static struct mesh_conn mesh;
 
 static void sent(struct mesh_conn *c) {
-  printf("Packet sent\n");
+  //printf("Packet sent\n");
 }
 
 static void timedout(struct mesh_conn *c) {
@@ -165,16 +165,23 @@ PROCESS_THREAD(gateway_main, ev, data)
     if (ev == serial_line_event_message && data != NULL) {
     	printf("received line: %s\n", (char *)data);
       if (!strcmp(CMD_NUMBER_OF_MOTES, data)) {
+        char creg[33], cmis[33], cran[33];
+        char * t = byte_to_binary(cows_registered);
+        strcpy(creg, t);
+        t = byte_to_binary(cows_missing);
+        strcpy(cmis, t);
+        t = byte_to_binary(cows_in_range);
+        strcpy(cran, t);
         printf("Counting cows:\n    %2d %16s %s \n    %2d %16s %s \n    %2d %16s %s \n",
           count_cows(cows_registered),
           "cows registered",
-          byte_to_binary(cows_registered),
+          creg,
           count_cows(cows_in_range),
           "cows in range",
-          byte_to_binary(cows_in_range),
+          cran,
           count_cows(cows_missing),
           "cows missing",
-          byte_to_binary(cows_missing)
+          cmis
         );
       }
     }
