@@ -122,7 +122,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   //ACK
   if(packetbuf_datalen()==1){
     printf("Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
-    ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
+    //ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
   }
   //Krava message
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
@@ -139,9 +139,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
     //printf("Cows registered with gateway: %s\n", byte_to_binary(cows_in_range));
   }
   // Command
-  else{
-    printf("TODO this is probably command from gateway :)\n");
-
+  else{    
     CmdMsg command;
     decodeCmdMsg(packetbuf_dataptr(), &command);
     handleCommand(&command);
