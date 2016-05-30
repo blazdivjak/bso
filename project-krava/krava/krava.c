@@ -3,6 +3,7 @@
 *__date: 2016-04-15__
 *__project krava__
 */
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "contiki.h"
@@ -20,7 +21,7 @@
 #include "random.h"
 //#include "../lib/libmath.h"
 
-#define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)*1
+#define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)/2
 #define RSSI_READ_INTERVAL (CLOCK_SECOND)*5
 #define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*360
 #define TEMP_READ_INTERVAL (CLOCK_SECOND)*30
@@ -56,6 +57,14 @@ Message mNew; //new message received for decoding
 Packets myPackets; //list of packets sent and waiting to be acked
 Packets otherKravaPackets; //list of packets sent from other kravas if I am gateway
 uint8_t iAmGateway; //set to 1 if you are gateway and to 0 if you are only krava
+
+//Measurement
+#define IIR_STRENGTH 4
+#define MOVEMENT_COUNTER_VAL 2
+#define WALKING_TRESHOLD 100000
+#define RUNNING_TRESHOLD 200000
+static int64_t average_movement = 70000;
+static uint8_t movement_counter = 0;
 
 /*
 * Mesh functions
@@ -196,15 +205,35 @@ void readTemperature(){
 	//printTemperature(decoded_temperature);
 	m.temp = decoded_temperature;
 }
+
+
 void readMovement(){
 	
-	int16_t x, y, z;	
+	int64_t x, y, z;	
 
 	x = adxl345.value(X_AXIS);
     y = adxl345.value(Y_AXIS);
     z = adxl345.value(Z_AXIS);       
-    //printf("Movement: x: %d y: %d z: %d\n",x, y, z);    
-    addMotion(&m, 1);
+    //printf("Movement: x: %d y: %d z: %d\n",x, y, z);  
+    int64_t acc =  x*x + y*y + z*z;
+    average_movement = average_movement + (acc - average_movement)/IIR_STRENGTH;
+    if (movement_counter%MOVEMENT_COUNTER_VAL == 0) {
+	    if (average_movement < WALKING_TRESHOLD) {
+	    	addMotion(&m, STANDING);
+	    	printf("Standing \t");
+	    } else if (average_movement < RUNNING_TRESHOLD) {
+	    	addMotion(&m, WALKING);
+	    	printf("Walking \t");
+	    } else {
+	    	addMotion(&m, RUNNING);
+	    	printf("Running \t");
+	    }
+
+	    printf("Acce: %" PRId64 "\tAvg: %" PRId64 "\n", acc, average_movement);
+	}
+	movement_counter++;
+
+    
     //TODO: Compare with previous motion and find 0,1,2,3 motion statuses.
 
 }

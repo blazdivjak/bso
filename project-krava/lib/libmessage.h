@@ -16,6 +16,11 @@
 #define CMD_EMERGENCY_ONE	5	// Mote unreachable for more than 10sec. target_id is the address of unreachable mote
 #define CMD_EMERGENCY_TWO	7	// Cow is running for more than 5sec, other motes should report fine grained RSSI data to that cow. target_id is address of running cow
 
+// Motion values
+#define STANDING 0
+#define WALKING 1
+#define RUNNING 2
+
 /* 
  * struct and helper functions for storing measurements from sensors and sending 
  * data over network
