@@ -109,10 +109,32 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   	//TODO: If I am gateway add this packets to otherKravaPackets
   }
   //Gateway command
-  else{
-  	printf("TODO this is probably command from gateway :)\n");
-  	printf("Messaage from gateway: %s", packetbuf_dataptr());
+  else{  	
+  	CmdMsg command;
+    decodeCmdMsg(packetbuf_dataptr(), &command);
+    handleCommand(&command);
   }    
+}
+
+/*
+Handle gateway commands
+*/
+
+void handleCommand(CmdMsg *command) {
+  
+  if (command->cmd == CMD_SET_LOCAL_GW) {
+    printf("Command: Set local gateway: %d", command->target_id);
+  }else if (command->cmd == CMD_QUERY_MOTE) {
+    printf("Command: Query from gateway: %d", command->target_id);
+  }else if (command->cmd == CMD_EMERGENCY_ONE) {
+    printf("Emergency one, cow unreachable id: %d", command->target_id);
+  } else if (command->cmd == CMD_EMERGENCY_TWO) {
+    printf("Emergency two, cow running id: %d", command->target_id);
+  } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
+    printf("Emergency one cancel, cow id: %d", command->target_id);
+  } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
+    printf("Emergency two cancel, cow id: %d", command->target_id);
+  }
 }
 
 /*
@@ -144,13 +166,6 @@ static void cancelEmergencyTwo(){
 	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
 	command.target_id = myAddress_1;
 	sendCommand();		
-}
-
-/*
-Gateway command handling
-*/
-static void handleCommand(){
-
 }
 
 /*
@@ -294,14 +309,6 @@ void readMovement(){
 }
 int readRSSI(){
 		
-  // static signed char rssi;
-  // static signed char rss_val;  
-  // static signed char rss_offset;
-  // rss_val = packetbuf_attr(PACKETBUF_ATTR_RSSI);
-  // rss_val = (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI);  
-  // rss_offset=-45;
-  // rssi=rss_val + rss_offset;   
-
   return packetbuf_attr(PACKETBUF_ATTR_RSSI) - 45;
 }
 
