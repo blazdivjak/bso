@@ -89,13 +89,13 @@ static void cows_find_missing() {
 void handleCommand(CmdMsg *command) {
   
   if (command->cmd == CMD_EMERGENCY_ONE) {
-    printf("Emergency one, cow unreachable id: %d", command->target_id);
+    printf("Emergency one, cow unreachable id: %d\n", command->target_id);
   } else if (command->cmd == CMD_EMERGENCY_TWO) {
-    printf("Emergency two, cow running id: %d", command->target_id);
+    printf("Emergency two, cow running id: %d\n", command->target_id);
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
-    printf("Emergency one cancel, cow id: %d", command->target_id);
+    printf("Emergency one cancel, cow id: %d\n", command->target_id);
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
-    printf("Emergency two cancel, cow id: %d", command->target_id);
+    printf("Emergency two cancel, cow id: %d\n", command->target_id);
   } 
 
 }
