@@ -35,6 +35,8 @@
 #define CATCH } else {
 #define ETRY } }while(0)
 #define THROW longjmp(ex_buf__, 1)
+// slustering
+#define 
 
 /*
 Static values
@@ -42,10 +44,16 @@ Static values
 static uint8_t myAddress_1 = MY_ADDRESS_1;
 static uint8_t myAddress_2 = MY_ADDRESS_2;
 static uint8_t sendFailedCounter = 0;
+// cows registered and present in network
 static uint32_t cows_registered = 0;
 static uint32_t cows_in_range = 0;
 static uint32_t cows_missing = 0;
 static int register_cows[NUMBER_OF_COWS] = {1, 2, 3};
+// cows sensors reading storage
+static uint8_t batterys[NUMBER_OF_COWS];
+static uint8_t motions[NUMBER_OF_COWS];
+static uint8_t num_of_neighbours[NUMBER_OF_COWS];
+static uint8_t neighbours[NUMBER_OF_COWS][MAX_NUMBER_OF_COWS];
 
 /*
  * Functions for cattle management
@@ -82,7 +90,7 @@ static uint32_t cows_registration() {
 }
 
 // check if any of the cows went out of range
-static void cows_find_missing() {
+static void find_missing_cows() {
   cows_missing = cows_registered ^ cows_in_range;
 }
 
@@ -99,7 +107,6 @@ void handleCommand(CmdMsg *command) {
   } 
 
 }
-
 
 /*
 * Initialize mesh
@@ -119,12 +126,12 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
 	
 
-  //ACK
+  // ACK
   if(packetbuf_datalen()==1){
     printf("Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
     //ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
   }
-  //Krava message
+  // Krava message
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
     // if sent to me? and the message format is right ...
     Message m;
@@ -133,10 +140,18 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
     packetbuf_copyfrom(&m.id, 1);
     mesh_send(&mesh, from);
 
-    // save how many cows are in range
+    // update cows that are in range
     cows_in_range |= 1 << m.mote_id;
-    cows_missing = cows_registered ^ cows_in_range;
-    //printf("Cows registered with gateway: %s\n", byte_to_binary(cows_in_range));
+    find_missing_cows();
+    
+    // update status of sensors for each cow
+    motions[m.mote_id] = m.motions;
+    batterys[m.mote_id] = m.battery;
+    num_of_neighbours[m.mote_id] = m.neighbourCount;
+    int i;
+    for (i = 0; i < m.neighbourCount; i++){
+      neighbours[m.mote_id][i] = m.neighbours[i];
+    }
   }
   // Command
   else{    
@@ -146,7 +161,6 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   }  
 
 }
-
 
 const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 
@@ -204,7 +218,7 @@ PROCESS_THREAD(gateway_main, ev, data)
       etimer_reset(&meshRefreshInterval);
     }
     if(etimer_expired(&cows_missing_interval)){
-      cows_find_missing();
+      find_missing_cows();
       etimer_reset(&cows_missing_interval);
     }
 
