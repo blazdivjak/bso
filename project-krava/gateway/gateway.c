@@ -29,14 +29,15 @@
 #define MY_ADDRESS_2 0//1
 #define MAX_NUMBER_OF_COWS 32
 #define NUMBER_OF_COWS 3
-#define COW_MISSING_INTERVAL (CLOCK_SECOND)*30
+#define COW_MISSING_INTERVAL (CLOCK_SECOND)*10
 // exceptions
 #define TRY do{ jmp_buf ex_buf__; if( !setjmp(ex_buf__) ){
 #define CATCH } else {
 #define ETRY } }while(0)
 #define THROW longjmp(ex_buf__, 1)
-// slustering
-#define 
+// clustering
+#define CLUSTERS_REFRESH_INTERVAL (CLOCK_SECOND)*40
+#define RSSI_TRESHOLD -75
 
 /*
 Static values
@@ -49,11 +50,16 @@ static uint32_t cows_registered = 0;
 static uint32_t cows_in_range = 0;
 static uint32_t cows_missing = 0;
 static int register_cows[NUMBER_OF_COWS] = {1, 2, 3};
+// cows missing counter - save how many times the cow is seen in network - if zero raise alarm
+static uint8_t cows_missing_counter[NUMBER_OF_COWS];
 // cows sensors reading storage
 static uint8_t batterys[NUMBER_OF_COWS];
 static uint8_t motions[NUMBER_OF_COWS];
 static uint8_t num_of_neighbours[NUMBER_OF_COWS];
 static uint8_t neighbours[NUMBER_OF_COWS][MAX_NUMBER_OF_COWS];
+// clusters
+static uint8_t cluster_counts[NUMBER_OF_COWS];  //  number of cows in cluster
+static uint32_t clusters[NUMBER_OF_COWS];  // cluster ids
 
 /*
  * Functions for cattle management
@@ -108,6 +114,10 @@ void handleCommand(CmdMsg *command) {
 
 }
 
+int readRSSI() {   
+  return packetbuf_attr(PACKETBUF_ATTR_RSSI) - 45;
+}
+
 /*
 * Initialize mesh
 */
@@ -133,7 +143,16 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   }
   // Krava message
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
-    // if sent to me? and the message format is right ...
+    // TODO: if sent to me? and the message format is right ...
+
+    // read packet RSSI value
+    if (hops <= 1) {
+      // This packet is from neighbouring krava, read and save the RSSI value
+      int rssi; 
+      rssi = readRSSI();
+    }
+
+    // message decode
     Message m;
     decode(packetbuf_dataptr(), packetbuf_datalen(), &m);
     printMessage(&m);
@@ -200,10 +219,14 @@ PROCESS_THREAD(gateway_main, ev, data)
   static struct etimer cows_missing_interval;
   etimer_set(&cows_missing_interval, COW_MISSING_INTERVAL);
 
-  /* Start mesh */
+  /* Set mesh refresh timer */
   static struct etimer meshRefreshInterval;
   etimer_set(&meshRefreshInterval, MESH_REFRESH_INTERVAL);
   mesh_open(&mesh, 14, &callbacks);
+
+  /* Set timer for cluster generation */
+  static struct etimer clusters_refresh_interval;
+  etimer_set(&clusters_refresh_interval, CLUSTERS_REFRESH_INTERVAL);
 
   while(1) {    
 
@@ -220,6 +243,10 @@ PROCESS_THREAD(gateway_main, ev, data)
     if(etimer_expired(&cows_missing_interval)){
       find_missing_cows();
       etimer_reset(&cows_missing_interval);
+    }
+    if(etimer_expired(&clusters_refresh_interval)){
+      printf("Timer for cluster refresh expired\n");
+      etimer_reset(&clusters_refresh_interval);
     }
 
     if (ev == serial_line_event_message && data != NULL) {
