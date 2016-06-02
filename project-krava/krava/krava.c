@@ -28,11 +28,25 @@
 #define BATTERY_READ_INTERVAL (CLOCK_SECOND)*30
 #define SEND_INTERVAL (CLOCK_SECOND)*30
 
+static int mesh_refresh_interval = MESH_REFRESH_INTERVAL;
+static int send_interval = SEND_INTERVAL;
+static int movement_read_interval = MOVEMENT_READ_INTERVAL;
+static int rssi_read_interval = RSSI_READ_INTERVAL;
+static int temp_read_intreval = TEMP_READ_INTERVAL;
+static int battery_read_interval = BATTERY_READ_INTERVAL;
+
+static struct etimer movementReadInterval;
+static struct etimer temperatureReadInterval;	
+static struct etimer rssiReadInterval;
+
 //Networking
 #define DEFAULT_GATEWAY_ADDRESS 0 //falback to default gateway if we cant conntact gateway
 #define CURRENT_GATEWAY_ADDRESS 0
 #define MY_ADDRESS_1 0//1
 #define MY_ADDRESS_2 0//1
+
+static struct etimer sendInterval;
+static struct etimer meshRefreshInterval;	
 
 static uint8_t myAddress_1 = MY_ADDRESS_1;
 static uint8_t myAddress_2 = MY_ADDRESS_2;
@@ -40,12 +54,23 @@ static uint8_t defaultGateway = DEFAULT_GATEWAY_ADDRESS;
 static uint8_t currentGateway = CURRENT_GATEWAY_ADDRESS;
 static uint8_t sendFailedCounter = 0;
 
-//Neighbors
+//Neighbors and definitions
 #define NEIGHBOR_TABLE_REINITIALIZE_INTERVAL (CLOCK_SECOND)*360
 #define NEIGHBOR_SENSE_INTERVAL (CLOCK_SECOND)*5
 #define NEIGHBOR_SENSE_TIME (CLOCK_SECOND)*1
 #define NEIGHBOR_ADVERTISEMENT_INTERVAL (CLOCK_SECOND)*5
 #define RSSI_TRESHOLD -75
+
+static int neighbor_table_reinitialize_interval = NEIGHBOR_TABLE_REINITIALIZE_INTERVAL;
+static int neighbor_sense_interval = NEIGHBOR_SENSE_INTERVAL;
+static int neighbor_sense_time = NEIGHBOR_SENSE_TIME;
+static int neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
+
+static struct etimer neighborAdvertismentInterval;
+static struct etimer neighborSenseInterval;
+static struct etimer neighborSenseTime;
+static struct etimer neighborTableRinitializeInterval;
+
 static uint8_t kravaNeighbors[20];
 static uint8_t numberOfNeighbors = 0;
 
@@ -70,11 +95,11 @@ static uint8_t movement_counter = 0;
 static uint8_t running_counter = 0;
 
 struct {
-	unsigned char iAmGateway : 1;
-	unsigned char emergencyOne : 1;
-	unsigned char emergencyTwo : 1;
-	unsigned char systemEmergencyOne : 1;
-	unsigned char systemEmergencyTwo : 1;
+	uint8_t iAmGateway;
+	uint8_t emergencyOne;
+	uint8_t emergencyTwo;
+	uint8_t systemEmergencyOne;
+	uint8_t systemEmergencyTwo;
 } status;
 
 /*
@@ -83,22 +108,22 @@ struct {
 
 static void sent(struct mesh_conn *c)
 {
-  printf("packet sent\n");
+  printf("NETWORK: packet sent\n");
 }
 static void timedout(struct mesh_conn *c)
 {
   //TODO: Move this function to ACK receive function
   sendFailedCounter += 1;
-  printf("packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
+  printf("NETWORK: packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
    
-  printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  printf("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
   
   //ACK
   if(packetbuf_datalen()==1){
-  	printf("Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
+  	printf("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
   	ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
   }
   //Krava message
@@ -127,55 +152,108 @@ Handle gateway commands
 
 void handleCommand(CmdMsg *command) {
   
-  if (command->cmd == CMD_SET_LOCAL_GW) {
-    printf("Command: Set local gateway: %d\n", command->target_id);
-  }else if (command->cmd == CMD_QUERY_MOTE) {
-    printf("Command: Query from gateway: %d\n", command->target_id);
-  }else if (command->cmd == CMD_EMERGENCY_ONE) {
-    printf("Emergency one, cow unreachable id: %d\n", command->target_id);
+  if(command->cmd == CMD_SET_LOCAL_GW) {
+    printf("COMMAND: Set local gateway: %d\n", command->target_id);
+    currentGateway = command->target_id;
+
+    //TODO: Set TX power
+
+  } else if (command->cmd == CMD_QUERY_MOTE) {
+    printf("COMMAND: Query from gateway: %d\n", command->target_id);
+    sendMessage();
+  } else if (command->cmd == CMD_EMERGENCY_ONE) {
+    printf("COMMAND: Emergency one, cow unreachable id: %d\n", command->target_id);
+    handleEmergencyOne();
   } else if (command->cmd == CMD_EMERGENCY_TWO) {
-    printf("Emergency two, cow running id: %d\n", command->target_id);
+    printf("COMMAND: Emergency two, cow running id: %d\n", command->target_id);
+    handleEmergencyTwo();
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
-    printf("Emergency one cancel, cow id: %d\n", command->target_id);
+    printf("COMMAND: Emergency one cancel, cow id: %d\n", command->target_id);
+    cancelEmergencies();
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
-    printf("Emergency two cancel, cow id: %d\n", command->target_id);
+    printf("COMMAND: Emergency two cancel, cow id: %d\n", command->target_id);
+    cancelEmergencies();
   }
 }
 
 /*
 Emergency mode handling
 */
-static void triggerEmergencyTwo(){
-	if (status.emergencyTwo == 1) {
-		
+
+void handleEmergencyOne(){
+
+	//TODO: Reconfigure timers
+	printf("EMERGENCY: Searching for lost krava.\n");
+
+}
+
+void handleEmergencyTwo(){
+
+	//TODO: Reconfigure timers
+
+	//If I am the running krava dont bother to monitor :)
+	if(status.emergencyTwo==1){
 		return;
 	}
+	//Monitor rssi for this krava
+	else{
+		printf("EMERGENCY: Starting running krava monitoring.\n");
+
+		//Configure broadcast listening timer and sense more offten
+
+		//Move RSSI treshold higher for comparison
+
+		//TODO: save its RSSI to table and sent to Gateway
+
+	}	
+}
+
+void cancelEmergencies(){
+
+	//TODO: Reconfigure timers and back to normal operations with all timers
+	printf("Resuming normal operations.\n");
+
+}
+
+static void triggerEmergencyTwo(){
+	
+	if (status.emergencyTwo == 1) {		
+		return;
+	}
+	
 	status.emergencyTwo = 1;
-	printf("Emergency Two triggered\n");
+	printf("EMERGENCY: Emergency Two triggered\n");
 
 	setCmdMsgId(&command, 32);
 	command.cmd = CMD_EMERGENCY_TWO;
 	command.target_id = m.mote_id;
 	sendCommand();	
 
-	//TODO: Reconfigure timers
-	
+	//Advertise offten and mesure movement more offten
+	printf("EMERGENCY: Adjusting my neighbor advertisment interval and movement recording interval.\n");
+	neighbor_advertisment_interval = (CLOCK_SECOND)/2;
+	movement_read_interval = (CLOCK_SECOND)/4;
+
 }
 
 static void cancelEmergencyTwo(){
+	
 	running_counter = 0;
+	
 	if (status.emergencyTwo == 0) {
 		return;
 	}
-	printf("Emergency Two canceled\n");
+	
+	printf("EMERGENCY: Emergency Two canceled\n");
 	status.emergencyTwo = 0;
 	setCmdMsgId(&command, 32);
 	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
 	command.target_id = m.mote_id;
-	sendCommand();		
+	sendCommand();
 
-	//TODO: Reconfigure timers
-
+	printf("EMERGENCY: Defaulting my neighbor advertisment interval and movement recording interval.\n");
+	neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
+	movement_read_interval = MOVEMENT_READ_INTERVAL;
 }
 
 /*
@@ -192,7 +270,7 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;
-  printf("My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
+  printf("NETWORK: My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
   uint16_t shortaddr = (addr.u8[0] << 8) + addr.u8[1];
   cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, NULL);   
   linkaddr_set_node_addr (&addr);	
@@ -200,13 +278,14 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){
 
 static void setCurrentGateway(uint8_t currentGatewayAddress){
 
+	printf("NETWORK: Setting current gateway to: %d", currentGatewayAddress);
 	currentGateway = currentGatewayAddress;
 }
 
 
 void sendCommand(){
 	
-  printf("Sending command to my current gateway ID: %d.0\n", currentGateway);
+  printf("COMMAND: Sending command to my current gateway ID: %d.0\n", currentGateway);
     
   linkaddr_t addr_send;     
   encodeCmdMsg(&command, &command_buffer);  
@@ -216,9 +295,9 @@ void sendCommand(){
   mesh_send(&mesh, &addr_send);
 }
 
-static void sendMessage(){
+void sendMessage(){
 	
-  printf("Sending message to my current gateway ID: %d.0\n", currentGateway);
+  printf("MESSAGES: Sending message to my current gateway ID: %d.0\n", currentGateway);
 
   setMsgID(&m);
   
@@ -249,10 +328,15 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
   rssi = readRSSI();
   //printf("Neighbor advertisment received from %d.%d: '%s' RSSI: %d\n", from->u8[0], from->u8[1], (char *)packetbuf_dataptr(), rssi);
     
+  
+  //TODO: If emergency
+
+  //TODO: Save to RSSI mesurements
+
   //Check message rssi for adding only close neighbors  
   if (rssi>=rssiTreshold){
   	addNeighbour(&m, from->u8[0]);
-	printf("Neighbor detected adding %d to table. RSSI: %d, Current number of neighbors: %d.\n",from->u8[0],rssi, m.neighbourCount);
+	printf("NETWORK: Neighbor detected adding %d to table. RSSI: %d, Current number of neighbors: %d.\n",from->u8[0],rssi, m.neighbourCount);
   }    
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
@@ -337,6 +421,7 @@ PROCESS_THREAD(krava, ev, data)
 	//Our process
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
+
 	printf("Sensor sensing process\n");
 	status.iAmGateway = 0;
 	status.emergencyOne = 0;
@@ -345,13 +430,9 @@ PROCESS_THREAD(krava, ev, data)
 	status.systemEmergencyTwo = 0;
 
 	//Initialize timers for intervals
-	static struct etimer movementReadInterval;
-	static struct etimer temperatureReadInterval;	
-	static struct etimer rssiReadInterval;
-
-	etimer_set(&movementReadInterval, MOVEMENT_READ_INTERVAL);
-	etimer_set(&rssiReadInterval, RSSI_READ_INTERVAL);
-	etimer_set(&temperatureReadInterval, TEMP_READ_INTERVAL);	
+	etimer_set(&movementReadInterval, movement_read_interval);
+	etimer_set(&rssiReadInterval, rssi_read_interval);
+	etimer_set(&temperatureReadInterval, temp_read_intreval);	
 	
 	//Initialize sensors
 	SENSORS_ACTIVATE(button_sensor);
@@ -394,16 +475,14 @@ PROCESS_THREAD(communication, ev, data)
 {	
 	//Our process		
 	PROCESS_BEGIN();
+
 	resetMessage(&m);
 	printf("Communication process\n");	
 	setAddress(node_id, myAddress_2);
 	setCurrentGateway(defaultGateway);
-		
-	static struct etimer sendInterval;
-	static struct etimer meshRefreshInterval;	
-	
-	etimer_set(&sendInterval, SEND_INTERVAL);
-	etimer_set(&meshRefreshInterval, MESH_REFRESH_INTERVAL);	
+			
+	etimer_set(&sendInterval, send_interval);
+	etimer_set(&meshRefreshInterval, mesh_refresh_interval);	
 	mesh_open(&mesh, 14, &callbacks);
 
 	//Process main loop
@@ -423,11 +502,11 @@ PROCESS_THREAD(communication, ev, data)
 		//TODO: SendFailedCounter=queue length
 		//if(sendFailedCounter%10==0){
 		if(etimer_expired(&meshRefreshInterval)){
-			printf("Closing Mesh\n");			
+			printf("NETWORK: Closing Mesh\n");
 			mesh_close(&mesh);
 			m.neighbourCount = 0;
 			mesh_open(&mesh, 14, &callbacks);
-			printf("Initializing Mesh\n");			
+			printf("NETWORK: Initializing Mesh\n");			
 			//sendFailedCounter+=10;
 			etimer_reset(&meshRefreshInterval);
 		}
@@ -444,14 +523,10 @@ PROCESS_THREAD(neighbors, ev, data)
 	PROCESS_BEGIN();
 	printf("Neighbor discovery process\n");
 
-	static struct etimer neighborAdvertismentInterval;
-	static struct etimer neighborSenseInterval;
-	static struct etimer neighborSenseTime;
-	static struct etimer neighborTableRinitializeInterval;
-	etimer_set(&neighborAdvertismentInterval, NEIGHBOR_ADVERTISEMENT_INTERVAL);
-	etimer_set(&neighborSenseInterval, NEIGHBOR_SENSE_INTERVAL);
-	etimer_set(&neighborSenseTime, NEIGHBOR_SENSE_TIME);
-	etimer_set(&neighborTableRinitializeInterval, NEIGHBOR_TABLE_REINITIALIZE_INTERVAL);	
+	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
+	etimer_set(&neighborSenseInterval, neighbor_sense_interval);
+	etimer_set(&neighborSenseTime, neighbor_sense_time);
+	etimer_set(&neighborTableRinitializeInterval, neighbor_table_reinitialize_interval);	
 	uint8_t sensing = 0;	
 	//Process main loop
 	while(1) {
@@ -462,7 +537,7 @@ PROCESS_THREAD(neighbors, ev, data)
 			if(sensing==0){
 				broadcast_open(&broadcast, 129, &broadcast_call);
 				//printf("Sensing for neighbors\n");								
-				etimer_set(&neighborSenseTime, NEIGHBOR_SENSE_TIME);
+				etimer_set(&neighborSenseTime, neighbor_sense_time);
 				sensing = 1;
 			}						
 		}
@@ -471,7 +546,7 @@ PROCESS_THREAD(neighbors, ev, data)
 			if(sensing == 1){
 				broadcast_close(&broadcast);
 				//printf("Sensing stoped\n");					
-				etimer_set(&neighborSenseInterval, NEIGHBOR_SENSE_INTERVAL + random_rand() % (NEIGHBOR_SENSE_INTERVAL));
+				etimer_set(&neighborSenseInterval, neighbor_sense_interval + random_rand() % (neighbor_sense_interval));
 				sensing = 0;
 			}						
 		}								
@@ -482,7 +557,7 @@ PROCESS_THREAD(neighbors, ev, data)
  			packetbuf_copyfrom("Hello", 5);    
     		broadcast_send(&broadcast);
     		//printf("Neighbor advertisment sent\n");
-			etimer_set(&neighborAdvertismentInterval, NEIGHBOR_SENSE_INTERVAL + random_rand() % (NEIGHBOR_SENSE_INTERVAL));
+			etimer_set(&neighborAdvertismentInterval, neighbor_sense_interval + random_rand() % (neighbor_sense_interval));
 			broadcast_close(&broadcast);
 		}				
 	}
