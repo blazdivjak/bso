@@ -19,6 +19,7 @@
 #include "../lib/libsensors.h"
 #include "../lib/libmessage.h"
 #include "random.h"
+#include "cc2420.h"
 //#include "../lib/libmath.h"
 
 #define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)
@@ -83,6 +84,9 @@ CmdMsg command;
 static int64_t average_movement = 70000;
 static uint8_t movement_counter = 0;
 static uint8_t running_counter = 0;
+
+//Power
+static uint8_t txpower;
 
 struct {	
 	uint8_t iAmGateway;
@@ -221,7 +225,7 @@ void cancelEmergencies(){
 
 }
 
-static void toggleEmergencyOne(){
+void toggleEmergencyOne(){
 	
 	if (status.emergencyOne == 1) {		
 		return;
@@ -283,6 +287,19 @@ static void cancelEmergencyTwo(){
 	
 	neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
 	movement_read_interval = MOVEMENT_READ_INTERVAL;
+}
+
+/*
+Power handling
+*/
+
+static void setPower(){
+	
+	//Remember old power
+	txpower = cc2420_get_txpower();
+	printf("Power: %d\n", txpower);
+	cc2420_set_txpower(30);	
+
 }
 
 /*
@@ -513,6 +530,7 @@ PROCESS_THREAD(communication, ev, data)
 	printf("Communication process\n");	
 	setAddress(node_id, myAddress_2);
 	setCurrentGateway(defaultGateway);
+	setPower();
 
 	static struct etimer ackCountInterval;
 	static struct etimer sendInterval;
