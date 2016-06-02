@@ -127,20 +127,23 @@ static int find_cow_with_id(uint8_t id) {
 /* Command functions */
 static void handleCommand(CmdMsg *command) {
   
+  printf("COMMAND: Processing command\n");
+
   if (command->cmd == CMD_EMERGENCY_ONE) {
-    printf("Emergency one, cow unreachable id: %d\n", command->target_id);
+    printf("COMMAND: Emergency one, cow unreachable id: %d\n", command->target_id);
   } else if (command->cmd == CMD_EMERGENCY_TWO) {
-    printf("Emergency two, cow running id: %d\n", command->target_id);
+    printf("COMMAND: Emergency two, cow running id: %d\n", command->target_id);
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
-    printf("Emergency one cancel, cow id: %d\n", command->target_id);
+    printf("COMMAND: Emergency one cancel, cow id: %d\n", command->target_id);
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
-    printf("Emergency two cancel, cow id: %d\n", command->target_id);
+    printf("COMMAND: Emergency two cancel, cow id: %d\n", command->target_id);
   } 
 }
 
 static void broadcast_CmdMsg(int command_id) {
-  printf("MESSAGE: Broadcasting command %d\n", command_id);
-  setCmdMsgId(&command, command_id);
+  printf("MESSAGES: Broadcasting command %d\n", command_id);
+  setCmdMsgId(&command, 31);
+  command.cmd = command_id;
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;
@@ -166,16 +169,16 @@ static void sent(struct mesh_conn *c) {
 
 static void timedout(struct mesh_conn *c) {
   sendFailedCounter += 1;
-  printf("packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
+  printf("MESSAGES: packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
-  printf("Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  printf("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
 	
 
   // ACK
   if(packetbuf_datalen()==1){
-    printf("Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
+    printf("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
     //ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
   }
   // Krava message
@@ -201,7 +204,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
 
     // update info on how many times the cow is seen
     cows_seen_counter[cow_index] += 1;
-    cows_missing |= 1 << cow_index;
+    cows_seen_counter_status |= 1 << cow_index;
     
     // update status of sensors for each cow
     motions[cow_index] = m.motions;
@@ -235,20 +238,20 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){
 
 /* Timer handlers */
 static void handle_reset_mesh() {
-  printf("Reinitializing Mesh\n");
+  printf("NETWORK: Reinitializing Mesh\n");
   mesh_close(&mesh);
   mesh_open(&mesh, 14, &callbacks);
 }
 
 static void handle_clusters(){
   // TODO: refresh clusters
-  printf("Timer for cluster refresh expired\n");
+  printf("CLUSTERS: Timer for cluster refresh expired\n");
 }
 
 static void handle_missing_cows() {
   cows_missing = cows_seen_counter_status ^ cows_registered;
 
-  printf("- Cows missing parameter %s\n", byte_to_binary(cows_missing));
+  printf("CATTLE: Cows missing parameter %s\n", byte_to_binary(cows_missing));
   if (count_cows(cows_missing) > 0) {
     // raise alarm two
     status.emergency_missing |= cows_missing;
@@ -283,7 +286,7 @@ static void handle_cows_seen_refresh() {
     }
     cows_seen_counter[i] = 0;
   }
-  printf("Missing %d registered cows: %s\n", 
+  printf("CATTLE: Missing %d registered cows: %s\n", 
     count_cows(cows_seen_counter_status) - count_cows(cows_registered), 
     byte_to_binary(cows_seen_counter_status ^ cows_registered));
 }
@@ -344,7 +347,7 @@ PROCESS_THREAD(gateway_main, ev, data)
         strcpy(creg, t);
         t = byte_to_binary(cows_missing);
         strcpy(cmis, t);
-        printf("SERIAL: Counting cows:\n  %2d %16s %s \n  %2d %16s %s \n",
+        printf("SERIAL: Counting cows:\nSERIAL:  %2d %16s %s \nSERIAL:  %2d %16s %s \n",
           count_cows(cows_registered),
           "cows registered",
           creg,
