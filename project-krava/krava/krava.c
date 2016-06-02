@@ -95,9 +95,10 @@ static uint8_t movement_counter = 0;
 static uint8_t running_counter = 0;
 
 struct {
-	uint8_t iAmGateway;
+	uint8_t iAmGateway;	
 	uint8_t emergencyOne;
 	uint8_t emergencyTwo;
+	uint8_t emergencyTarget;
 	uint8_t systemEmergencyOne;
 	uint8_t systemEmergencyTwo;
 } status;
