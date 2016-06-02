@@ -47,7 +47,7 @@ static uint32_t cows_registered = 0; // bitmap for registered cows
 static uint32_t cows_missing = 0; // bitmap for missing cows
 static uint8_t cows_seen_counter[NUMBER_OF_COWS]; // count how many times the cow is seen in network - if zero raise alarm
 static uint32_t cows_seen_counter_status = 0;
-#define COWS_SEEN_ALARM_WINDOW 2 // iterations of COWS_SEEN_COUNTER_INTERVAL to keep alarm on (default: 2)
+#define COWS_SEEN_ALARM_WINDOW 3 // iterations of COWS_SEEN_COUNTER_INTERVAL to keep alarm on (default: 3)
 static uint8_t cows_seen_alarm_window = COWS_SEEN_ALARM_WINDOW;
 
 // cows sensors reading storage
@@ -105,7 +105,7 @@ static int count_cows(uint32_t x){
   return c;
 }
 
-static uint32_t cows_registration() {
+static void cows_registration() {
   // register cows into cows_registered bitmap
   cows_registered = 0;
   int i;
@@ -124,6 +124,16 @@ static int find_cow_with_id(uint8_t id) {
   return i;
 }
 
+static int find_cow_id_from_bitmap(uint32_t bitmap) {
+  uint8_t i;
+  for (i = 0; i < MAX_NUMBER_OF_COWS; i ++) {
+    if ((bitmap & 1 << i) > 0) {
+      break;
+    }
+  }
+  return find_cow_with_id(i);
+}
+
 /* Command functions */
 static void handleCommand(CmdMsg *command) {
   
@@ -140,17 +150,17 @@ static void handleCommand(CmdMsg *command) {
   } 
 }
 
-static void broadcast_CmdMsg(int command_id) {
-  printf("MESSAGES: Broadcasting command %d\n", command_id);
+static void broadcast_CmdMsg(int command_id, int target) {
+  printf("COMMAND: Broadcasting command %d\n", command_id);
   setCmdMsgId(&command, 31);
   command.cmd = command_id;
+  command.target_id = target;
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;
   int i;
   for (i = 0; i < NUMBER_OF_COWS; i++) {
     addr.u8[0] = register_cows[i];
-    command.target_id = register_cows[i];
     encodeCmdMsg(&command, &command_buffer);
     packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
     mesh_send(&mesh, &addr);
@@ -250,8 +260,10 @@ static void handle_clusters(){
 
 static void handle_missing_cows() {
   cows_missing = cows_seen_counter_status ^ cows_registered;
+  uint32_t old_emergency_missing = status.emergency_missing;
 
-  printf("CATTLE: Cows missing parameter %s\n", byte_to_binary(cows_missing));
+  printf("CATTLE: Cows missing: %s\n", byte_to_binary(cows_missing));
+  int target = find_cow_id_from_bitmap(cows_missing);
   if (count_cows(cows_missing) > 0) {
     // raise alarm two
     status.emergency_missing |= cows_missing;
@@ -259,7 +271,8 @@ static void handle_missing_cows() {
     // disable alarm one - all cows are found
     status.emergency_missing = 0;
     cows_seen_alarm_window = COWS_SEEN_ALARM_WINDOW;
-    broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE);
+    //if (old_emergency_missing != 0) { // only send cancel if previous command was alarm
+    broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, target);
   }
 
   // disable alarm if its on for more than cows seen alarm window
@@ -268,12 +281,12 @@ static void handle_missing_cows() {
     if (cows_seen_alarm_window <= 0) { // disable alarm after cows_seen_alarm_window iterations of alarm
       status.emergency_missing = 0;
       cows_seen_alarm_window = COWS_SEEN_ALARM_WINDOW;
-      broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE);
+      broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, target);
     }
   }
 
   if (status.emergency_missing > 0) {
-    broadcast_CmdMsg(CMD_EMERGENCY_ONE);
+    broadcast_CmdMsg(CMD_EMERGENCY_ONE, target);
   }
 }
 
@@ -287,7 +300,7 @@ static void handle_cows_seen_refresh() {
     cows_seen_counter[i] = 0;
   }
   printf("CATTLE: Missing %d registered cows: %s\n", 
-    count_cows(cows_seen_counter_status) - count_cows(cows_registered), 
+    count_cows(cows_registered) - count_cows(cows_seen_counter_status), 
     byte_to_binary(cows_seen_counter_status ^ cows_registered));
 }
 
@@ -342,7 +355,7 @@ PROCESS_THREAD(gateway_main, ev, data)
     if (ev == serial_line_event_message && data != NULL) {
     	printf("SERIAL: received line: %s\n", (char *)data);
       if (!strcmp(CMD_NUMBER_OF_MOTES, data)) {
-        char creg[33], cmis[33], cran[33];
+        char creg[33], cmis[33];
         char * t = byte_to_binary(cows_registered);
         strcpy(creg, t);
         t = byte_to_binary(cows_missing);
