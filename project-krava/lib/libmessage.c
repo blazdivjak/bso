@@ -20,9 +20,18 @@
 /*
  * Sets random number to message structure - we can assume the number will be unique in our system
  */
-void setMsgID (struct Message *m) {
-	m->id = ((uint8_t) rand()) & 0xFE ;	// Krava messages will always have 0 as the last bit, gateway will always have 1
+uint8_t setMsgId (struct Message *m, uint8_t id) {
+	if (id > 0x3F) {
+		id = id % 0x3F;
+	}
+	m->id = (id<<2) | (m->id & 0x03);
+	return id;
 }
+
+uint8_t getMsgId(struct Message *m) {
+	return (m->id>>2)&0x3F;
+}
+
 
 
 /*
@@ -73,7 +82,7 @@ void resetMessage(struct Message *m) {
 	m->battery = 0;
 	m->motions = 0;
 
-	setMsgID(m);	// set a new ID
+	setMsgId(m, getMsgId(m)+1);	// set a new ID
 }
 
 
@@ -124,7 +133,7 @@ void printMessage(struct Message *m) {
 	//bufferSize = sprintf(buffer, "%d plus %d is %d", a, b, a+b);
 	printf("Message struct contains: %2d motion measurements and %2d neighbours \n", 
 		m->motionCount, m->neighbourCount);
-	printf("Msg ID: %d, Mote ID: %d, Temp: %d, Battery: %d\n", m->id, m->mote_id, m->temp, m->battery);
+	printf("Msg ID: %d, Mote ID: %d, Temp: %d, Battery: %d\n", getMsgId(m), m->mote_id, m->temp, m->battery);
 
 	printf("Motions:");
 	uint8_t buffer[m->motionCount];
@@ -216,27 +225,27 @@ void ackMessage (struct Packets *p, uint8_t messageID) {
 
 // Always encodes it to 3 bytes (3 x uint8_t)
 void encodeCmdMsg(struct CmdMsg *m, uint8_t *buffer) {
-	buffer[0] = 1;
+	buffer[0] = m->id;
 	buffer[1] = m->cmd;
-	buffer[2] = m->id;
-	buffer[3] = m->target_id;
+	buffer[2] = m->target_id;
 }
 
 void decodeCmdMsg(uint8_t * buffer, struct CmdMsg *m) {
-
+	m->id = buffer[0];
 	m->cmd = buffer[1];
-	m->id = buffer[2];
-	m->target_id = buffer[3];
+	m->target_id = buffer[2];
 }
 
 uint8_t setCmdMsgId(struct CmdMsg *m, uint8_t id) {
-	if (id > 31) {
-		m->id = 0;
-	} else {
-		m->id = id;
+	if (id > 0x3F) {
+		id = id % 0x3F;
 	}
+	m->id = (id<<2) | (m->id & 0x03);
+	return id;
+}
 
-	return m->id;
+uint8_t getCmdMsgId(struct CmdMsg *m) {
+	return (m->id>>2);
 }
 
 void printCmdMsg(struct CmdMsg *m) {
@@ -249,6 +258,85 @@ void printCmdMsg(struct CmdMsg *m) {
 	} else if (m->cmd == CMD_EMERGENCY_TWO) {
 		printf("Emergency mode 2: ");
 	}
-	printf("Message ID = %d ", m->id);
+	printf("Message ID = %d ", getCmdMsgId(m));
 	printf("Target ID = %d\n", m->target_id);
+}
+
+uint8_t encodeEmergencyMsg(struct EmergencyMsg *m, uint8_t *buffer) {
+
+	int8_t i = 0, j = 0;
+	buffer[j++] = m->id;
+	buffer[j++] = m->mote_id;
+
+	buffer[j++] = m->dataCount;
+	for (i = 0; i < m->dataCount; i++) {
+		buffer[j++] = m->data[i];
+	}
+
+	return j;
+}
+
+void decodeEmergencyMsg(uint8_t * buffer, struct EmergencyMsg *m)
+{
+	int8_t i = 0, j = 0;
+
+	m->id = buffer[j++];
+	m->mote_id = buffer[j++];
+
+	m->dataCount = buffer[j++];
+	for (i = 0; i < m->dataCount; i++) {
+		m->data[i] = buffer[j++];
+	}
+}
+
+uint8_t setEmergencyMsgId(struct EmergencyMsg *m, uint8_t id) {
+	if (id > 0x3F) {
+		id = id % 0x3F;
+	}
+	m->id = (id<<2) | (m->id & 0x03);
+	return id;
+}
+
+uint8_t getEmergencyMsgId(struct EmergencyMsg *m){
+	return (m->id>>2);
+}
+
+void setEmergencyMsgType(struct EmergencyMsg *m, uint8_t type){
+	m->id = (m->id&0xFC) | (type&0x03);
+}
+
+uint8_t getEmergencyMsgType(struct EmergencyMsg *m) {
+	return (m->id)&0x03;
+}
+
+void printEmergencyMsg(struct EmergencyMsg *m) {
+	if (getEmergencyMsgType(m) == MSG_EMERGENCY_ONE) {
+		printf("Emergency one msg: id=%d; dataCount=%d, data:\n", getEmergencyMsgId(m), m->dataCount);
+	} else if (getEmergencyMsgType(m) == MSG_EMERGENCY_TWO) {
+		printf("Emergency two msg: id=%d; dataCount=%d, data:\n", getEmergencyMsgId(m), m->dataCount);
+	} else {
+		printf("Unsupported emergency type\n");
+		return;
+	}
+
+	uint8_t i;
+	for (i=0; i < m->dataCount; i++) {
+		printf("%d, ", m->data[i]);
+	}
+	printf("\n");
+
+}
+
+void addEmergencyData(struct EmergencyMsg *m, uint8_t dataPoint) {
+	uint8_t i = 0;
+
+	if (m->dataCount < EMERGENCY_DATA_MAX) {
+		m->data[m->dataCount] = dataPoint;
+		m->dataCount++;
+	}
+}
+
+void resetEmergencyMsg(struct EmergencyMsg *m) {
+	setEmergencyMsgId(m, getEmergencyMsgId(m)+1);
+	m->dataCount = 0;
 }

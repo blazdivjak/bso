@@ -65,10 +65,6 @@ int main()
 	mNew = m;
 	printMessage(&mNew);
 
-	// printf("Reseting all readings \n");
-	// m = resetMessage(m);
-	// printf("Temps: %d Accelerations: %d, Batterys: %d\n", m.tempsCount, m.accelerationsCount, m.batteriesCount);
-
 	printf("\n\nPackets...\n");
 	Packets p;
 	resetPackets(&p);
@@ -97,6 +93,23 @@ int main()
 	CmdMsg g2;
 	decodeCmdMsg(buffer, &g2);
 	printCmdMsg(&g2);
+
+	printf("\n\nEmergency Message\n");
+	EmergencyMsg e, eNew;
+	setEmergencyMsgType(&e, MSG_EMERGENCY_ONE);
+	setEmergencyMsgId(&e, 7);
+
+	addEmergencyData(&e, 0);
+	addEmergencyData(&e, 1);
+	addEmergencyData(&e, 2);
+	addEmergencyData(&e, 3);
+	addEmergencyData(&e, 4);
+
+	encodeEmergencyMsg(&e, buffer);
+	decodeEmergencyMsg(buffer, &eNew);
+
+	printEmergencyMsg(&e);
+	printEmergencyMsg(&eNew);
 
 
 	return 0;
