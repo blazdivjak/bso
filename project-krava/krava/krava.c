@@ -152,6 +152,7 @@ void handleCommand(CmdMsg *command) {
   if(command->cmd == CMD_SET_LOCAL_GW) {
     printf("COMMAND: Set local gateway: %d\n", command->target_id);
     currentGateway = command->target_id;
+    setPower(15);
 
     //TODO: Set TX power
 
@@ -181,15 +182,14 @@ void handleEmergencyOne(){
 
 	//Reconfigure timers
 	printf("EMERGENCY: Searching for lost krava.\n");
-	//mesh_refresh_interval = (CLOCK_SECOND)*30;
+	mesh_refresh_interval = (CLOCK_SECOND)*30;
 
-	//TODO: FULL power
+	//full power
+	setPower(31);	
 
 }
 
 void handleEmergencyTwo(){
-
-	//TODO: Reconfigure timers
 
 	//If I am the running krava dont bother to monitor :)
 	if(status.emergencyTwo==1){
@@ -216,7 +216,9 @@ void cancelEmergencies(){
 	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 	
 	if(status.emergencyOne==2){
-		//TODO: Back to powersaver
+		
+		//TODO: Back to previous power level
+		setPower(txpower);
 	}
 	else if(status.emergencyTwo==2){
 		//TODO: Send data
@@ -236,7 +238,8 @@ void toggleEmergencyOne(){
 		status.emergencyOne = 1;
 		currentGateway = DEFAULT_GATEWAY_ADDRESS;
 		mesh_refresh_interval = (CLOCK_SECOND)*30;
-		//TODO: Full power & mesh reinitialize
+		//Full power & mesh reinitialize
+		setPower(31);		
 
 	}else{		
 		status.ackCounter=0;	
@@ -293,12 +296,11 @@ static void cancelEmergencyTwo(){
 Power handling
 */
 
-static void setPower(){
-	
-	//Remember old power
+void setPower(uint8_t powerLevel){
+		
 	txpower = cc2420_get_txpower();
-	printf("Power: %d\n", txpower);
-	cc2420_set_txpower(30);	
+	printf("POWER: previous: %d Now: %d\n", txpower, powerLevel);
+	cc2420_set_txpower(powerLevel);	
 
 }
 
@@ -529,8 +531,7 @@ PROCESS_THREAD(communication, ev, data)
 	resetMessage(&m);
 	printf("Communication process\n");	
 	setAddress(node_id, myAddress_2);
-	setCurrentGateway(defaultGateway);
-	setPower();
+	setCurrentGateway(defaultGateway);	
 
 	static struct etimer ackCountInterval;
 	static struct etimer sendInterval;
