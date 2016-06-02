@@ -107,6 +107,11 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   	printMessage(&mNew);
 
   	//TODO: If I am gateway add this packets to otherKravaPackets
+
+  	//TODO: Send ACK for packet
+
+  	//TODO: Aggregate packets and send forward
+
   }
   //Gateway command
   else{  	
@@ -152,6 +157,9 @@ static void triggerEmergencyTwo(){
 	command.cmd = CMD_EMERGENCY_TWO;
 	command.target_id = m.mote_id;
 	sendCommand();	
+
+	//TODO: Reconfigure timers
+	
 }
 
 static void cancelEmergencyTwo(){
@@ -165,6 +173,9 @@ static void cancelEmergencyTwo(){
 	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
 	command.target_id = m.mote_id;
 	sendCommand();		
+
+	//TODO: Reconfigure timers
+
 }
 
 /*
@@ -343,31 +354,35 @@ PROCESS_THREAD(krava, ev, data)
 	etimer_set(&temperatureReadInterval, TEMP_READ_INTERVAL);	
 	
 	//Initialize sensors
-	tmp102_init();
-	
-	SENSORS_ACTIVATE(button_sensor);	
-	SENSORS_ACTIVATE(battery_sensor);
-	SENSORS_ACTIVATE(adxl345);
-
+	SENSORS_ACTIVATE(button_sensor);
+	//tmp102_init();			
+		
 	//Process main loop
 	while(1) {
 
 		PROCESS_WAIT_EVENT();
 		
 		if(etimer_expired(&movementReadInterval)){
+			SENSORS_ACTIVATE(adxl345);
 			readMovement();
 			etimer_reset(&movementReadInterval);
+			SENSORS_DEACTIVATE(adxl345);
 		}		
 		if(etimer_expired(&temperatureReadInterval)){
+			SENSORS_ACTIVATE(battery_sensor);
+			SENSORS_ACTIVATE(tmp102);
 			readTemperature();
 			readBattery();			
 			etimer_reset(&temperatureReadInterval);
+			SENSORS_DEACTIVATE(battery_sensor);
+			SENSORS_DEACTIVATE(tmp102);
 		}		
 	}
 	exit:		
 		SENSORS_DEACTIVATE(button_sensor);
 		SENSORS_DEACTIVATE(battery_sensor);	
-		SENSORS_DEACTIVATE(adxl345);	
+		SENSORS_DEACTIVATE(adxl345);
+		SENSORS_DEACTIVATE(tmp102);	
 		leds_off(LEDS_ALL);
 		PROCESS_END();
 }

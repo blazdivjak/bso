@@ -64,8 +64,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>33.27809950860426</x>
-        <y>45.230025408933535</y>
+        <x>31.275755670801402</x>
+        <y>36.72006409827141</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -82,8 +82,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>72.45169258056</x>
-        <y>37.568560067582716</y>
+        <x>41.58222508109935</x>
+        <y>24.386463135380595</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -136,7 +136,7 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>1</z>
+    <z>0</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -165,7 +165,7 @@
       <coloring />
     </plugin_config>
     <width>1520</width>
-    <z>0</z>
+    <z>1</z>
     <height>523</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
