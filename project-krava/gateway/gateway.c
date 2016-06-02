@@ -38,6 +38,8 @@
 // clustering
 #define CLUSTERS_REFRESH_INTERVAL (CLOCK_SECOND)*40
 #define RSSI_TRESHOLD -75
+// cows seen refresh interval in which every cow should be able to deliver at least one message
+#define COWS_SEEN_COUNTER_REFRESH_INTERVAL (CLOCK_SECOND)*60
 
 /*
 Static values
@@ -50,16 +52,17 @@ static uint32_t cows_registered = 0;
 static uint32_t cows_in_range = 0;
 static uint32_t cows_missing = 0;
 static int register_cows[NUMBER_OF_COWS] = {1, 2, 3};
-// cows missing counter - save how many times the cow is seen in network - if zero raise alarm
-static uint8_t cows_missing_counter[NUMBER_OF_COWS];
+// cows seen counter - count how many times the cow is seen in network - if zero raise alarm
+static uint8_t cows_seen_counter[MAX_NUMBER_OF_COWS];
+static uint32_t cows_seen_counter_status = 0;
 // cows sensors reading storage
 static uint8_t batterys[NUMBER_OF_COWS];
 static uint8_t motions[NUMBER_OF_COWS];
 static uint8_t num_of_neighbours[NUMBER_OF_COWS];
 static uint8_t neighbours[NUMBER_OF_COWS][MAX_NUMBER_OF_COWS];
 // clusters
-static uint8_t cluster_counts[NUMBER_OF_COWS];  //  number of cows in cluster
-static uint32_t clusters[NUMBER_OF_COWS];  // cluster ids
+static uint8_t cluster_counts[MAX_NUMBER_OF_COWS];  //  number of cows in cluster
+static uint32_t clusters[MAX_NUMBER_OF_COWS];  // cluster ids
 
 /*
  * Functions for cattle management
@@ -111,7 +114,6 @@ void handleCommand(CmdMsg *command) {
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
     printf("Emergency two cancel, cow id: %d\n", command->target_id);
   } 
-
 }
 
 int readRSSI() {   
@@ -162,6 +164,8 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
     // update cows that are in range
     cows_in_range |= 1 << m.mote_id;
     find_missing_cows();
+    // update info on how many times the cow is seen
+    cows_seen_counter[m.mote_id] += 1;
     
     // update status of sensors for each cow
     motions[m.mote_id] = m.motions;
@@ -228,6 +232,10 @@ PROCESS_THREAD(gateway_main, ev, data)
   static struct etimer clusters_refresh_interval;
   etimer_set(&clusters_refresh_interval, CLUSTERS_REFRESH_INTERVAL);
 
+  /* Set timer for cluster generation */
+  static struct etimer cows_seen_counter_refresh_interval;
+  etimer_set(&cows_seen_counter_refresh_interval, COWS_SEEN_COUNTER_REFRESH_INTERVAL);
+
   while(1) {    
 
     PROCESS_WAIT_EVENT(); 
@@ -247,6 +255,20 @@ PROCESS_THREAD(gateway_main, ev, data)
     if(etimer_expired(&clusters_refresh_interval)){
       printf("Timer for cluster refresh expired\n");
       etimer_reset(&clusters_refresh_interval);
+    }
+    if(etimer_expired(&cows_seen_counter_refresh_interval)){
+      cows_seen_counter_status = 0;
+      int i = 0;
+      for (i=0; i < MAX_NUMBER_OF_COWS; i++) {
+        if (cows_seen_counter[i] > 0) {
+          cows_seen_counter_status |= 1 << i;
+        }
+        cows_seen_counter[i] = 0;
+      }
+      printf("Missing %d registered cows: %s\n", 
+        count_cows(cows_seen_counter_status) - count_cows(cows_registered), 
+        byte_to_binary(cows_seen_counter_status ^ cows_registered));
+      etimer_reset(&cows_seen_counter_refresh_interval);
     }
 
     if (ev == serial_line_event_message && data != NULL) {
