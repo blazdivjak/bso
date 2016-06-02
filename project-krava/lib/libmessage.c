@@ -216,15 +216,17 @@ void ackMessage (struct Packets *p, uint8_t messageID) {
 
 // Always encodes it to 3 bytes (3 x uint8_t)
 void encodeCmdMsg(struct CmdMsg *m, uint8_t *buffer) {
-	buffer[0] = m->cmd;
-	buffer[1] = m->id;
-	buffer[2] = m->target_id;
+	buffer[0] = 1;
+	buffer[1] = m->cmd;
+	buffer[2] = m->id;
+	buffer[3] = m->target_id;
 }
 
 void decodeCmdMsg(uint8_t * buffer, struct CmdMsg *m) {
-	m->cmd = buffer[0];
-	m->id = buffer[1];
-	m->target_id = buffer[2];
+
+	m->cmd = buffer[1];
+	m->id = buffer[2];
+	m->target_id = buffer[3];
 }
 
 uint8_t setCmdMsgId(struct CmdMsg *m, uint8_t id) {

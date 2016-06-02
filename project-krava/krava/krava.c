@@ -136,7 +136,8 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
 
   }
   //Gateway command
-  else{  	
+  else{
+  	printf("MESSAGES: Decoding command\n");
   	CmdMsg command;
     decodeCmdMsg(packetbuf_dataptr(), &command);
     handleCommand(&command);
