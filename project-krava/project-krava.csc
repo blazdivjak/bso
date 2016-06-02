@@ -8,6 +8,7 @@
   <project EXPORT="discard">[APPS_DIR]/powertracker</project>
   <simulation>
     <title>krava</title>
+    <speedlimit>2.0</speedlimit>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -64,8 +65,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>31.275755670801402</x>
-        <y>36.72006409827141</y>
+        <x>25.936172103327124</x>
+        <y>48.56726513860495</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -82,8 +83,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>41.58222508109935</x>
-        <y>24.386463135380595</y>
+        <x>61.27193948616074</x>
+        <y>31.728390540657728</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -100,8 +101,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>31.034407559243032</x>
-        <y>20.621452084422373</y>
+        <x>44.383366477928725</x>
+        <y>48.821127800145895</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -118,8 +119,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>58.10914072690706</x>
-        <y>62.928550293756906</y>
+        <x>38.25256433536209</x>
+        <y>66.4326520099119</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -136,7 +137,7 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>0</z>
+    <z>1</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -165,7 +166,7 @@
       <coloring />
     </plugin_config>
     <width>1520</width>
-    <z>1</z>
+    <z>0</z>
     <height>523</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
