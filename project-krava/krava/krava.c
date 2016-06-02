@@ -150,6 +150,8 @@ Handle gateway commands
 
 void handleCommand(CmdMsg *command) {
   
+  printf("COMMAND: Procesing command"); 	
+
   if(command->cmd == CMD_SET_LOCAL_GW) {
     printf("COMMAND: Set local gateway: %d\n", command->target_id);
     currentGateway = command->target_id;
