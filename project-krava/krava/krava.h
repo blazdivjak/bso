@@ -133,7 +133,8 @@ void handleCommand(CmdMsg *command);
 // Emergency mode handling
 void handleEmergencyOne();
 void handleEmergencyTwo();
-void cancelEmergencies();
+void cancelSysEmergencyOne();
+void cancelSysEmergencyTwo();
 void toggleEmergencyOne();
 static void triggerEmergencyTwo();
 static void cancelEmergencyTwo();

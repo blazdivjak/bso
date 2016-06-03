@@ -117,10 +117,10 @@ void handleCommand(CmdMsg *command) {
     handleEmergencyTwo();
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
     PRINTF("COMMAND: Emergency one cancel, cow id: %d\n", command->target_id);
-    cancelEmergencies();
+    cancelSysEmergencyOne();
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
     PRINTF("COMMAND: Emergency two cancel, cow id: %d\n", command->target_id);
-    cancelEmergencies();
+    cancelSysEmergencyTwo();
   }
 }
 
@@ -153,16 +153,10 @@ void handleEmergencyTwo() {
 		//Configure broadcast listening timer and sense more offten
 		neighbor_sense_time = (CLOCK_SECOND);		
 		status.emergencyTwo = 2;
-
-		//TODO: save its RSSI to table and sent to Gateway
-
 	}	
 }
 
-void cancelEmergencies() {
-
-	//TODO: Reconfigure timers and back to normal operations with all timers
-	PRINTF("Resuming normal operations.\n");
+void cancelSysEmergencyOne() {
 
 	neighbor_sense_time =  NEIGHBOR_SENSE_TIME;
 	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
@@ -174,7 +168,15 @@ void cancelEmergencies() {
 
 		status.emergencyOne = 0;
 	}
-	else if(status.emergencyTwo==2){
+
+}
+
+void cancelSysEmergencyTwo() {
+
+	neighbor_sense_time =  NEIGHBOR_SENSE_TIME;
+	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
+
+	if(status.emergencyTwo==2){
 		//TODO: Send data
 		sendEmergencyTwoRSSI();
 		status.emergencyTwo = 0;
@@ -183,8 +185,6 @@ void cancelEmergencies() {
 		sendEmergencyTwoAcc();
 		status.emergencyTwo = 0;
 	}
-
-
 }
 
 void toggleEmergencyOne() {
