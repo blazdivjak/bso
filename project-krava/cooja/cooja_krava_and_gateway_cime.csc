@@ -64,8 +64,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>29.19792477532318</x>
-        <y>0.8795690636164366</y>
+        <x>84.66221012777164</x>
+        <y>38.11106579752156</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -82,8 +82,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>97.96222272142981</x>
-        <y>28.557095886699443</y>
+        <x>66.2026339127278</x>
+        <y>44.35770321469301</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -100,8 +100,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>54.58188452925386</x>
-        <y>40.110517971372616</y>
+        <x>20.640484632940982</x>
+        <y>63.252381537040485</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -118,8 +118,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>43.25834042250318</x>
-        <y>81.75921344463752</y>
+        <x>45.639190583580124</x>
+        <y>80.8985361114082</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -153,10 +153,10 @@
       <skin>org.contikios.cooja.plugins.skins.AddressVisualizerSkin</skin>
       <skin>org.contikios.cooja.plugins.skins.TrafficVisualizerSkin</skin>
       <skin>org.contikios.cooja.plugins.skins.UDGMVisualizerSkin</skin>
-      <viewport>2.7007332327687683 0.0 0.0 2.7007332327687683 36.87051521920381 70.26845799331517</viewport>
+      <viewport>3.8890558551870265 0.0 0.0 3.8890558551870265 -55.833495121383606 -110.32897604518163</viewport>
     </plugin_config>
     <width>400</width>
-    <z>3</z>
+    <z>2</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -164,7 +164,7 @@
   <plugin>
     org.contikios.cooja.plugins.LogListener
     <plugin_config>
-      <filter>CLUSTERS</filter>
+      <filter>DEBUG</filter>
       <formatted_time />
       <coloring />
     </plugin_config>
@@ -212,7 +212,7 @@
       <scrollpos>0,0</scrollpos>
     </plugin_config>
     <width>708</width>
-    <z>2</z>
+    <z>3</z>
     <height>534</height>
     <location_x>2</location_x>
     <location_y>403</location_y>

@@ -174,9 +174,23 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2) {
 
 /* Timer handlers */
 static void handle_reset_mesh() {
-  printf("NETWORK: Reinitializing Mesh\n");
+  printf("NETWORK: Routing update\n");
   mesh_close(&mesh);
   mesh_open(&mesh, 14, &callbacks);
+
+  int i;  
+
+  for(i=0;i<4;i++){
+    linkaddr_t destinationAddr;
+      destinationAddr.u8[0] = i;
+      destinationAddr.u8[1] = 0;
+      //route_discovery_open(&mesh.route_discovery_conn, &destinationAddr, (uint16_t) 14, &mesh.cb);
+      //mesh_ready(&mesh);
+      //route_discovery_discover(&mesh.route_discovery_conn, &destinationAddr, (CLOCK_SECOND)*1);
+      //route_discovery_close(&mesh.route_discovery_conn);
+  }
+
+
 }
 
 static void handle_clusters() {
