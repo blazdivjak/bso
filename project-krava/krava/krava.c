@@ -272,7 +272,7 @@ void sendMessage() {
 	
   printf("MESSAGES: Sending message to my current gateway ID: %d.0\n", currentGateway);
 
-  setMsgID(&m, m.id+1);
+  setMsgId(&m, m.id+1);
   
   //Copy message  
   addMessage(&myPackets, &m);
