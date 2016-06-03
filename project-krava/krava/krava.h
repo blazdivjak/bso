@@ -126,6 +126,8 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2);
 static void setCurrentGateway(uint8_t currentGatewayAddress);
 void sendCommand();
 void sendMessage();
+void sendEmergencyTwoRSSI();
+void sendEmergencyTwoAcc();
 
 /*
 * Initialize broadcast connection

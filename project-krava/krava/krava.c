@@ -130,11 +130,8 @@ void handleEmergencyTwo() {
 		//Configure broadcast listening timer and sense more offten
 		neighbor_sense_time = (CLOCK_SECOND);		
 		
-		if (addEmergencyData(&eTwoRSSI, (uint8_t) (-1*readRSSI())) == EMERGENCY_DATA_MAX) {
-			//TODO: send emergency msg
-		}
-		//TODO: save its RSSI to table and sent to Gateway
 
+		//TODO: save its RSSI to table and sent to Gateway
 
 	}	
 }
@@ -154,6 +151,9 @@ void cancelEmergencies() {
 	}
 	else if(status.emergencyTwo==2){
 		//TODO: Send data
+		sendEmergencyTwoRSSI();
+	} else if(status.emergencyTwo==1) {
+		sendEmergencyTwoRSSI();
 	}
 
 
@@ -258,37 +258,63 @@ static void setCurrentGateway(uint8_t currentGatewayAddress) {
 
 void sendCommand() {
 	
-  printf("COMMAND: Sending command to my current gateway ID: %d.0\n", currentGateway);
-    
-  linkaddr_t addr_send;     
-  encodeCmdMsg(&command, command_buffer);  
-  packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);       
-  addr_send.u8[0] = currentGateway;
-  addr_send.u8[1] = 0;  
-  mesh_send(&mesh, &addr_send);
+	printf("COMMAND: Sending command to my current gateway ID: %d.0, %d bytes\n", currentGateway, CMD_BUFFER_MAX_SIZE);
+
+	linkaddr_t addr_send;     
+	encodeCmdMsg(&command, command_buffer);  
+	packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);       
+	addr_send.u8[0] = currentGateway;
+	addr_send.u8[1] = 0;  
+	mesh_send(&mesh, &addr_send);
+	resetCmdMsg(&command);
 }
 
 void sendMessage() {
-	
-  printf("MESSAGES: Sending message to my current gateway ID: %d.0\n", currentGateway);
 
-  setMsgId(&m, m.id+1);
-  
-  //Copy message  
-  addMessage(&myPackets, &m);
+	setMsgId(&m, m.id+1);
 
-  //TODO: Poslji komplet pakete
+	//Copy message  
+	addMessage(&myPackets, &m);
 
-  linkaddr_t addr_send; 
-  //char msg[2] = {1, 2};
-  //packetbuf_copyfrom(msg, 2);
-  uint8_t size = encodeData(&m, send_buffer);
-  packetbuf_copyfrom(send_buffer, size);       
-  addr_send.u8[0] = currentGateway;
-  addr_send.u8[1] = 0;
-  //printf("Mesh status: %d\n", mesh_ready(&mesh));
-  mesh_send(&mesh, &addr_send);
+	//TODO: Poslji komplet pakete
+
+	linkaddr_t addr_send; 
+	//char msg[2] = {1, 2};
+	//packetbuf_copyfrom(msg, 2);
+	uint8_t size = encodeData(&m, send_buffer);
+	printf("MESSAGES: Sending message to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
+	packetbuf_copyfrom(send_buffer, size);       
+	addr_send.u8[0] = currentGateway;
+	addr_send.u8[1] = 0;
+	//printf("Mesh status: %d\n", mesh_ready(&mesh));
+	mesh_send(&mesh, &addr_send);
+	resetMessage(&m);
 }
+
+void sendEmergencyTwoRSSI() {
+    
+	linkaddr_t addr_send;     
+	uint8_t size = encodeEmergencyMsg(&eTwoRSSI, emergencyBuffer);  
+	printf("EMERGENCY TWO RSSI: Sending to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
+	packetbuf_copyfrom(emergencyBuffer, size);       
+	addr_send.u8[0] = currentGateway;
+	addr_send.u8[1] = 0;  
+	mesh_send(&mesh, &addr_send);
+	resetEmergencyMsg(&eTwoRSSI);
+}
+
+void sendEmergencyTwoAcc() {
+    
+	linkaddr_t addr_send;     
+	uint8_t size = encodeEmergencyMsg(&eTwoAcc, emergencyBuffer);  
+	printf("EMERGENCY TWO RSSI: Sending to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
+	packetbuf_copyfrom(emergencyBuffer, size);       
+	addr_send.u8[0] = currentGateway;
+	addr_send.u8[1] = 0;  
+	mesh_send(&mesh, &addr_send);
+	resetEmergencyMsg(&eTwoAcc);
+}
+
 
 /*
 * Initialize broadcast connection
@@ -305,6 +331,9 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
   if((status.emergencyTwo) == 2 && (status.emergencyTarget == from->u8[0])){
   	
   	//TODO: Save to RSSI mesurements for lost krava
+	if (addEmergencyData(&eTwoRSSI, (uint8_t) (-1*readRSSI())) == EMERGENCY_DATA_MAX) {
+		sendEmergencyTwoRSSI();
+	}
 
   }  
 
