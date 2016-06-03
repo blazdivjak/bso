@@ -12,10 +12,10 @@
 #define MESSAGE_BYTE_SIZE_MAX 35	// how many bytes a single message can take when completely full
 #define EMERGENCY_DATA_MAX 124
 
-#define MSG_MESSAGE 0
-#define MSG_CMD 1
-#define MSG_E_TWO_RSSI 2
-#define MSG_E_TWO_ACC 3
+#define MSG_MESSAGE 0x00
+#define MSG_CMD 0x01
+#define MSG_E_TWO_RSSI 0x02
+#define MSG_E_TWO_ACC 0x03
 
 #define CMD_SET_LOCAL_GW	0	// Set local group gateway. target_id = address of the new local gateway
 #define CMD_QUERY_MOTE 		1   // Send status query to a specific mote

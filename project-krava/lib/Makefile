@@ -37,3 +37,4 @@ include $(CONTIKI)/Makefile.include
 
 clean:
 	-rm -rf $(A_DIR)
+	-rm *.o
