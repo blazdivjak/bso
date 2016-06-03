@@ -34,6 +34,24 @@ static unsigned long temp_read_intreval = TEMP_READ_INTERVAL;
 static unsigned long battery_read_interval = BATTERY_READ_INTERVAL;
 static unsigned long ack_count_interval = ACK_COUNT_INTERVAL;
 
+//Timers
+
+//krava - Mesurements
+static struct etimer movementReadInterval;
+static struct etimer temperatureReadInterval;	
+static struct etimer rssiReadInterval;	
+
+//Communications
+static struct etimer ackCountInterval;
+static struct etimer sendInterval;
+static struct etimer meshRefreshInterval;
+
+//Neightbors
+static struct etimer neighborAdvertismentInterval;
+static struct etimer neighborSenseInterval;
+static struct etimer neighborSenseTime;
+static struct etimer neighborTableRinitializeInterval;
+
 //Networking
 #define DEFAULT_GATEWAY_ADDRESS 0 //falback to default gateway if we cant conntact gateway
 #define CURRENT_GATEWAY_ADDRESS 0

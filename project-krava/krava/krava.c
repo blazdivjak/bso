@@ -161,15 +161,13 @@ void cancelEmergencies() {
 
 void toggleEmergencyOne() {
 	
-	if (status.emergencyOne == 1) {		
-		return;
-	}
-
 	if(status.ackCounter==0){
 		printf("EMERGENCY: Emergency One triggered.\n");
 		status.emergencyOne = 1;
 		currentGateway = DEFAULT_GATEWAY_ADDRESS;
-		mesh_refresh_interval = (CLOCK_SECOND)*30;
+		mesh_refresh_interval = (CLOCK_SECOND)*40;
+		etimer_set(&meshRefreshInterval, mesh_refresh_interval);
+		
 		//Full power & mesh reinitialize
 		setPower(CC2420_TXPOWER_MAX);		
 
@@ -181,7 +179,8 @@ void toggleEmergencyOne() {
 			mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 		}*/
 		status.emergencyOne=0;
-		mesh_refresh_interval = MESH_REFRESH_INTERVAL;					
+		mesh_refresh_interval = MESH_REFRESH_INTERVAL;	
+		etimer_set(&meshRefreshInterval, mesh_refresh_interval);						
 	}	
 }
 
@@ -428,10 +427,6 @@ PROCESS_THREAD(krava, ev, data)
 	status.emergencyOne = 0;
 	status.emergencyTwo = 0;
 
-	static struct etimer movementReadInterval;
-	static struct etimer temperatureReadInterval;	
-	static struct etimer rssiReadInterval;	
-
 	//Initialize timers for intervals
 	etimer_set(&movementReadInterval, movement_read_interval);
 	etimer_set(&rssiReadInterval, rssi_read_interval);
@@ -483,10 +478,6 @@ PROCESS_THREAD(communication, ev, data)
 	printf("Communication process\n");	
 	setAddress(node_id, myAddress_2);
 	setCurrentGateway(defaultGateway);	
-
-	static struct etimer ackCountInterval;
-	static struct etimer sendInterval;
-	static struct etimer meshRefreshInterval;
 		
 	etimer_set(&sendInterval, send_interval);
 	etimer_set(&meshRefreshInterval, mesh_refresh_interval);
@@ -514,7 +505,7 @@ PROCESS_THREAD(communication, ev, data)
 		//reinitialize mesh if sending failed more than 5 times
 		//TODO: SendFailedCounter=queue length
 		//if(sendFailedCounter%10==0){
-		if(etimer_expired(&meshRefreshInterval)){
+		if(etimer_expired(&meshRefreshInterval)){ //TODO: Fix etimer expired
 			printf("NETWORK: Closing Mesh\n");
 			mesh_close(&mesh);
 			m.neighbourCount = 0;
@@ -535,11 +526,6 @@ PROCESS_THREAD(neighbors, ev, data)
 	//Our process	
 	PROCESS_BEGIN();
 	printf("Neighbor discovery process\n");
-
-	static struct etimer neighborAdvertismentInterval;
-	static struct etimer neighborSenseInterval;
-	static struct etimer neighborSenseTime;
-	static struct etimer neighborTableRinitializeInterval;
 
 	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
 	etimer_set(&neighborSenseInterval, neighbor_sense_interval);
