@@ -84,7 +84,7 @@ static uint8_t numberOfNeighbors = 0;
 //message buffer
 static uint8_t send_buffer[MESSAGE_BYTE_SIZE_MAX];
 static uint8_t command_buffer[CMD_BUFFER_MAX_SIZE];
-static uint8_t emergencyBuffer[EMERGENCY_DATA_MAX+3];
+static uint8_t emergencyBuffer[EMERGENCY_DATA_MAX+4];
 static int rssiTreshold = RSSI_TRESHOLD;
 
 Message m; //message we save to
@@ -109,10 +109,10 @@ static uint8_t txpower;
 
 struct {	
 	uint8_t iAmGateway : 1;
-	uint8_t ackCounter;
 	uint8_t emergencyOne : 2;
 	uint8_t emergencyTwo : 2;
 	uint8_t emergencyTarget : 1;
+	uint8_t ackCounter : 8;
 } status;
 
 /*
