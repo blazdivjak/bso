@@ -47,7 +47,7 @@ static uint32_t cows_registered = 0; // bitmap for registered cows
 static uint32_t cows_missing = 0; // bitmap for missing cows
 static uint8_t cows_seen_counter[NUMBER_OF_COWS]; // count how many times the cow is seen in network - if zero raise alarm
 static uint32_t cows_seen_counter_status = 0;
-#define COWS_SEEN_ALARM_WINDOW 3 // iterations of COWS_SEEN_COUNTER_INTERVAL to keep alarm on (default: 3)
+#define COWS_SEEN_ALARM_WINDOW 2 // iterations of COWS_SEEN_COUNTER_INTERVAL to keep alarm on (default: 3)
 static uint8_t cows_seen_alarm_window = COWS_SEEN_ALARM_WINDOW;
 
 // cows sensors reading storage
@@ -55,10 +55,11 @@ static uint8_t batterys[NUMBER_OF_COWS];
 static uint8_t motions[NUMBER_OF_COWS];
 static uint8_t num_of_neighbours[NUMBER_OF_COWS];
 static uint8_t neighbours[NUMBER_OF_COWS][NUMBER_OF_COWS];
-
+static uint8_t hops[NUMBER_OF_COWS];
 // clusters
 static uint8_t cluster_counts[NUMBER_OF_COWS];  // number of cows in cluster
 static uint32_t clusters[NUMBER_OF_COWS];  // cluster ids
+static int cluster_scores[NUMBER_OF_COWS];  // scores for each cluster candidate
 
 // mesh
 static struct mesh_conn mesh;
@@ -254,8 +255,29 @@ static void handle_reset_mesh() {
 }
 
 static void handle_clusters(){
-  // TODO: refresh clusters
   printf("CLUSTERS: Timer for cluster refresh expired\n");
+
+  // Calculate scores for cluster head candidates
+  int i;
+  printf("CLUSTERS: Cluster scores: \n");
+  for (i = 0; i < NUMBER_OF_COWS; i++) {
+    int score = 0;
+    score += num_of_neighbours[i] * 1;
+    score += motions[i] * -1;
+    score += hops[i] * 2;
+    score += batterys[i] / 100;
+
+    cluster_scores[i] = score;
+    printf("%d-%d  ", register_cows[i], cluster_scores[i]);
+  }
+  printf("\n");
+
+  // TODO: find max nodes upto treshold
+
+  // TODO: Create clusters 
+
+  // TODO: Send cluster generation commands
+
 }
 
 static void handle_missing_cows() {
