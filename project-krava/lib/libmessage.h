@@ -96,13 +96,16 @@ typedef struct EmergencyMsg {
 
 uint8_t setEmergencyMsgId(struct EmergencyMsg *m, uint8_t id);
 uint8_t getEmergencyMsgId(struct EmergencyMsg *m);
+
 void setEmergencyMsgType(struct EmergencyMsg *m, uint8_t type);
 uint8_t getEmergencyMsgType(struct EmergencyMsg *m);
+
 uint8_t addEmergencyData(struct EmergencyMsg *m, uint8_t dataPoint);
 void resetEmergencyMsg(struct EmergencyMsg *m);
 
 uint8_t encodeEmergencyMsg(struct EmergencyMsg *m, uint8_t *buffer);	// Always encodes it to 3 bytes (2 x uint8_t)
 void decodeEmergencyMsg(uint8_t * buffer, struct EmergencyMsg *m);
+
 void printEmergencyMsg(struct EmergencyMsg *m);
 
 #endif

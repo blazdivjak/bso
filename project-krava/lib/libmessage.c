@@ -77,7 +77,7 @@ void addNeighbour (struct Message *m, uint8_t neighbour) {	//can only add MAX_NE
 void resetMessage(struct Message *m) {
 	m->motionCount = 0;
 	m->neighbourCount = 0;
-	m->mote_id = 0;
+	// m->mote_id = 0;
 	m->temp = 0;
 	m->battery = 0;
 	m->motions = 0;

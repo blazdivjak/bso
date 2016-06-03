@@ -71,7 +71,7 @@ static void handleCommand(CmdMsg *command) {
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
     printf("COMMAND: Emergency one cancel, cow id: %d\n", command->target_id);
     broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, command->target_id);
-    
+
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
     printf("COMMAND: Emergency two cancel, cow id: %d\n", command->target_id);
     broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_TWO, command->target_id);
@@ -263,6 +263,7 @@ PROCESS_THREAD(gateway_main, ev, data)
   /* Init functions */
   uart0_init(BAUD2UBR(115200));
   uart0_set_input(serial_line_input_byte);
+  resetCmdMsg(&command);
   setAddress(myAddress_1, myAddress_2);
   cows_registration();
 

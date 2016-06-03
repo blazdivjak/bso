@@ -437,7 +437,9 @@ PROCESS_THREAD(krava, ev, data)
 	resetPackets(&otherKravaPackets);
 	resetCmdMsg(&command);
 	resetEmergencyMsg(&eTwoRSSI);
+	setEmergencyMsgType(&eTwoRSSI, MSG_E_TWO_RSSI);
 	resetEmergencyMsg(&eTwoAcc);
+	setEmergencyMsgType(&eTwoAcc, MSG_E_TWO_ACC);
 
 	//Initialize timers for intervals
 	etimer_set(&movementReadInterval, movement_read_interval);
