@@ -330,7 +330,7 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
   if((status.emergencyTwo) == 2 && (status.emergencyTarget == from->u8[0])){
   	
   	//TODO: Save to RSSI mesurements for lost krava
-	if (addEmergencyData(&eTwoRSSI, (uint8_t) (-1*readRSSI())) == EMERGENCY_DATA_MAX) {
+	if (addEmergencyData(&eTwoRSSI, (uint8_t) (-1*readRSSI())) == EMERGENCY_DATA_MAX-1) {
 		sendEmergencyTwoRSSI();
 	}
 
@@ -397,7 +397,7 @@ void readMovement(){
 	}
 	movement_counter++;
 	if (status.emergencyTwo == 1) {
-		if (addEmergencyData(&eTwoAcc, (uint8_t) (acc/10000)) == EMERGENCY_DATA_MAX) {
+		if (addEmergencyData(&eTwoAcc, (uint8_t) (acc/10000)) == EMERGENCY_DATA_MAX-1) {
 			sendEmergencyTwoAcc();
 		}
 	}
