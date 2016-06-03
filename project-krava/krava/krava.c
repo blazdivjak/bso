@@ -431,6 +431,13 @@ PROCESS_THREAD(krava, ev, data)
 	status.iAmGateway = 0;
 	status.emergencyOne = 0;
 	status.emergencyTwo = 0;
+	resetMessage(&m);
+	resetMessage(&mNew);
+	resetPackets(&myPackets);
+	resetPackets(&otherKravaPackets);
+	resetCmdMsg(&command);
+	resetEmergencyMsg(&eTwoRSSI);
+	resetEmergencyMsg(&eTwoAcc);
 
 	//Initialize timers for intervals
 	etimer_set(&movementReadInterval, movement_read_interval);
