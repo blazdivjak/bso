@@ -162,7 +162,7 @@ static void broadcast_CmdMsg(int command_id, int target) {
   int i;
   for (i = 0; i < NUMBER_OF_COWS; i++) {
     addr.u8[0] = register_cows[i];
-    encodeCmdMsg(&command, &command_buffer);
+    encodeCmdMsg(&command, command_buffer);
     packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
     mesh_send(&mesh, &addr);
   }

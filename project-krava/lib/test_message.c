@@ -90,6 +90,7 @@ int main()
 	g.cmd = CMD_EMERGENCY_ONE;
 	g.target_id = 6;
 	encodeCmdMsg(&g, buffer);
+	printf("buffer[0]=%d\n", buffer[0]);
 	CmdMsg g2;
 	decodeCmdMsg(buffer, &g2);
 	printCmdMsg(&g2);
