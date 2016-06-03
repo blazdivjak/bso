@@ -4,10 +4,12 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "contiki.h"
 #include "dev/leds.h"
 #include "dev/button-sensor.h"
 #include "dev/i2cmaster.h"  // Include IC driver
-
+#include "dev/adxl345.h"
+#include "dev/tmp102.h"     // Include sensor driver
 #include "dev/battery-sensor.h"
 #include "net/rime/rime.h"
 #include "net/rime/mesh.h"
@@ -84,6 +86,7 @@ static uint8_t send_buffer[MESSAGE_BYTE_SIZE_MAX];
 static uint8_t command_buffer[CMD_BUFFER_MAX_SIZE];
 static uint8_t emergencyBuffer[EMERGENCY_DATA_MAX+3];
 static int rssiTreshold = RSSI_TRESHOLD;
+
 Message m; //message we save to
 Message mNew; //new message received for decoding
 Packets myPackets; //list of packets sent and waiting to be acked
@@ -106,7 +109,7 @@ static uint8_t txpower;
 
 struct {	
 	uint8_t iAmGateway : 1;
-	uint8_t ackCounter : 1;
+	uint8_t ackCounter;
 	uint8_t emergencyOne : 2;
 	uint8_t emergencyTwo : 2;
 	uint8_t emergencyTarget : 1;

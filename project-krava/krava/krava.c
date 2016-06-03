@@ -3,9 +3,6 @@
 *__date: 2016-04-15__
 *__project krava__
 */
-#include "contiki.h"
-#include "dev/adxl345.h"
-#include "dev/tmp102.h"     // Include sensor driver
 #include "krava.h"
 
 
@@ -39,9 +36,11 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &mNew);
   	printMessage(&mNew);
 
-  	//TODO: If I am gateway add this packets to otherKravaPackets
-
   	//TODO: Send ACK for packet
+  	packetbuf_copyfrom(&mNew.id, 1);
+    mesh_send(&mesh, from); // send ACK
+
+  	//TODO: If I am gateway add this packets to otherKravaPackets
 
   	//TODO: Aggregate packets and send forward
 
@@ -50,19 +49,33 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_CMD){
   	CmdMsg command;
     decodeCmdMsg(packetbuf_dataptr(), &command);
+
+    packetbuf_copyfrom(&command.id, 1);
+    mesh_send(&mesh, from); // send ACK
+
     handleCommand(&command);
   }   
 
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_RSSI){
   	EmergencyMsg eMsg;
   	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
+
+  	packetbuf_copyfrom(&eMsg.id, 1);
+    mesh_send(&mesh, from); // send ACK
+
   	printEmergencyMsg(&eMsg);
+
   } 
 
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_ACC){
   	EmergencyMsg eMsg;
   	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
+
+  	packetbuf_copyfrom(&eMsg.id, 1);
+    mesh_send(&mesh, from); // send ACK
+
   	printEmergencyMsg(&eMsg);
+
   }
 }
 
@@ -112,24 +125,25 @@ void handleEmergencyOne() {
 	printf("EMERGENCY: Searching for lost krava.\n");
 	mesh_refresh_interval = (CLOCK_SECOND)*30;
 
+	status.emergencyOne = 2;
+
 	//full power
 	setPower(CC2420_TXPOWER_MAX);	
-
 }
 
 void handleEmergencyTwo() {
 
 	//If I am the running krava dont bother to monitor :)
-	if(status.emergencyTwo==1){
+	if(status.emergencyTwo==1) {
 		return;
 	}
 	//Monitor rssi for this krava
-	else{
+	else {
 		printf("EMERGENCY: Starting running krava monitoring.\n");
 
 		//Configure broadcast listening timer and sense more offten
 		neighbor_sense_time = (CLOCK_SECOND);		
-		
+		status.emergencyTwo = 2;
 
 		//TODO: save its RSSI to table and sent to Gateway
 
@@ -144,16 +158,21 @@ void cancelEmergencies() {
 	neighbor_sense_time =  NEIGHBOR_SENSE_TIME;
 	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 	
-	if(status.emergencyOne==2){
+	if(status.emergencyOne != 0) {
 		
 		//TODO: Back to previous power level
 		setPower(txpower);
+
+		status.emergencyOne = 0;
 	}
 	else if(status.emergencyTwo==2){
 		//TODO: Send data
 		sendEmergencyTwoRSSI();
-	} else if(status.emergencyTwo==1) {
+		status.emergencyTwo = 0;
+	} 
+	else if(status.emergencyTwo==1) {
 		sendEmergencyTwoAcc();
+		status.emergencyTwo = 0;
 	}
 
 
@@ -161,7 +180,7 @@ void cancelEmergencies() {
 
 void toggleEmergencyOne() {
 	
-	if(status.ackCounter==0){
+	if(status.ackCounter==0) {
 		printf("EMERGENCY: Emergency One triggered.\n");
 		status.emergencyOne = 1;
 		currentGateway = DEFAULT_GATEWAY_ADDRESS;
@@ -171,7 +190,7 @@ void toggleEmergencyOne() {
 		//Full power & mesh reinitialize
 		setPower(CC2420_TXPOWER_MAX);		
 
-	}else{		
+	} else {
 		status.ackCounter=0;	
 		/*if(status.emergencyOne==1){
 			printf("EMERGENCY: Emergency One canceled.\n");

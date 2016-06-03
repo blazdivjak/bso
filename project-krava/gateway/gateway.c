@@ -157,6 +157,10 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   else{    
     CmdMsg command;
     decodeCmdMsg(packetbuf_dataptr(), &command);
+
+    packetbuf_copyfrom(&command.id, 1);
+    mesh_send(&mesh, from); // send ACK
+    
     handleCommand(&command);
   }  
 }
