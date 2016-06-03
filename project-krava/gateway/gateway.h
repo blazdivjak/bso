@@ -21,7 +21,7 @@
 #include <setjmp.h>  // exceptions
 
 // timers
-#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*60
+#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*360
 #define COW_MISSING_INTERVAL (CLOCK_SECOND)*10 // interval in which alarm is raised after the cow went missing
 #define COWS_SEEN_COUNTER_INTERVAL (CLOCK_SECOND)*60 // interval in which every cow should be able to deliver at least one message
 #define CLUSTERS_REFRESH_INTERVAL (CLOCK_SECOND)*40

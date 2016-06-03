@@ -278,15 +278,11 @@ void sendMessage() {
 	//TODO: Poslji komplet pakete
 
 	linkaddr_t addr_send; 
-	//char msg[2] = {1, 2};
-	//packetbuf_copyfrom(msg, 2);
 	uint8_t size = encodeData(&m, send_buffer);
-	printf("MESSAGES: Sending message to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
-	route_discovery_discover(&mesh.route_discovery_conn, &addr_send, (CLOCK_SECOND)*1);
+	printf("MESSAGES: Sending message to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);	
 	packetbuf_copyfrom(send_buffer, size);       
 	addr_send.u8[0] = currentGateway;
-	addr_send.u8[1] = 0;
-	//printf("Mesh status: %d\n", mesh_ready(&mesh));
+	addr_send.u8[1] = 0;	
 	mesh_send(&mesh, &addr_send);
 	resetMessage(&m);
 }
@@ -330,7 +326,7 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
   //If emergency
   if((status.emergencyTwo) == 2 && (status.emergencyTarget == from->u8[0])){
   	
-  	//TODO: Save to RSSI mesurements for lost krava
+  	//Save to RSSI mesurements for lost krava
 	if (addEmergencyData(&eTwoRSSI, (uint8_t) (-1*readRSSI())) == EMERGENCY_DATA_MAX-1) {
 		sendEmergencyTwoRSSI();
 	}
@@ -519,24 +515,11 @@ PROCESS_THREAD(communication, ev, data)
 		}		
 		//reinitialize mesh if sending failed more than 5 times				
 		if(etimer_expired(&meshRefreshInterval)){
-			printf("NETWORK: Routing update\n");
-			
-			int i;
+			printf("NETWORK: Routing table flush\n");					
 			m.neighbourCount = 0;
-
-			for(i=0;i<4;i++){
-				linkaddr_t destinationAddr;
-  				destinationAddr.u8[0] = i;
-  				destinationAddr.u8[1] = 0;
-  				//route_discovery_open(&mesh.route_discovery_conn, &destinationAddr, (uint16_t) 14, &mesh.cb);
-  				//mesh_ready(&mesh);
-  				//route_discovery_discover(&mesh.route_discovery_conn, &destinationAddr, (CLOCK_SECOND)*1);
-  				//route_discovery_close(&mesh.route_discovery_conn);
-			}
-
-			//mesh_close(&mesh);			
-			//mesh_open(&mesh, 14, &callbacks);
-			//sendFailedCounter+=10;
+			//printf("NETWORK: Number of routes: %d\n", route_num());
+			route_flush_all();
+			//printf("NETWORK: Number of routes: %d\n", route_num());	
 			etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 		}
 	}	
