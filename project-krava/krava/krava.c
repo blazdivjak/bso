@@ -153,7 +153,7 @@ void cancelEmergencies() {
 		//TODO: Send data
 		sendEmergencyTwoRSSI();
 	} else if(status.emergencyTwo==1) {
-		sendEmergencyTwoRSSI();
+		sendEmergencyTwoAcc();
 	}
 
 
@@ -210,8 +210,8 @@ static void cancelEmergencyTwo() {
 	
 	if (status.emergencyTwo == 0) {
 		return;
-	}
-	
+	} 
+
 	printf("EMERGENCY: Emergency Two canceled\n");
 	status.emergencyTwo = 0;
 	setCmdMsgId(&command, 32);
@@ -396,6 +396,11 @@ void readMovement(){
 	    //printf("Acce: %" PRId64 "\tAvg: %" PRId64 "\n", acc, average_movement);
 	}
 	movement_counter++;
+	if (status.emergencyTwo == 1) {
+		if (addEmergencyData(&eTwoAcc, (uint8_t) (acc/10000)) == EMERGENCY_DATA_MAX) {
+			sendEmergencyTwoAcc();
+		}
+	}
 
     
     //TODO: Compare with previous motion and find 0,1,2,3 motion statuses.
