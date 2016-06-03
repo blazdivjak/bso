@@ -102,6 +102,8 @@ void handleCommand(CmdMsg *command) {
     //set gateway
     if(command->target_id!=node_id){
     	currentGateway = command->target_id;	
+    	
+    	//TODO: Change power based on RSSI and also adjust RSSI for neighbor detection
     	setPower(15);
     }else{
     	setPower(CC2420_TXPOWER_MAX);
@@ -193,22 +195,17 @@ void toggleEmergencyOne() {
 		PRINTF("EMERGENCY: Emergency One triggered.\n");
 		status.emergencyOne = 1;
 		currentGateway = DEFAULT_GATEWAY_ADDRESS;
-		mesh_refresh_interval = (CLOCK_SECOND)*40;
+		mesh_refresh_interval = (CLOCK_SECOND)*60;
 		etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 		
 		//Full power & mesh reinitialize
-		setPower(CC2420_TXPOWER_MAX);		
+		setPower(CC2420_TXPOWER_MAX);
 
 	} else {
 		status.ackCounter=0;	
-		/*if(status.emergencyOne==1){
-			PRINTF("EMERGENCY: Emergency One canceled.\n");
-			status.emergencyOne=0;
-			mesh_refresh_interval = MESH_REFRESH_INTERVAL;
-		}*/
 		status.emergencyOne=0;
 		mesh_refresh_interval = MESH_REFRESH_INTERVAL;	
-		etimer_set(&meshRefreshInterval, mesh_refresh_interval);						
+		etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 	}	
 }
 
@@ -271,7 +268,7 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2) {
   m.mote_id = myAddress_1;
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
-  addr.u8[1] = myAddress_2;
+  addr.u8[1] = myAddress_2;  
   PRINTF("NETWORK: My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
   uint16_t shortaddr = (addr.u8[0] << 8) + addr.u8[1];
   cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, NULL);   
@@ -317,10 +314,10 @@ void sendMessage() {
 }
 
 void sendEmergencyTwoRSSI() {
-    
+   
 	linkaddr_t addr_send;     
 	uint8_t size = encodeEmergencyMsg(&eTwoRSSI, emergencyBuffer);  
-	PRINTF("EMERGENCY TWO RSSI: Sending to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
+	PRINTF("EMERGENCY: Number Two. Sending RSSI to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
 	packetbuf_copyfrom(emergencyBuffer, size);       
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;  
@@ -472,8 +469,6 @@ PROCESS_THREAD(krava, ev, data)
 	etimer_set(&rssiReadInterval, rssi_read_interval);
 	etimer_set(&temperatureReadInterval, temp_read_intreval);	
 	
-	//Initialize sensors
-	SENSORS_ACTIVATE(button_sensor);
 	//tmp102_init();			
 		
 	//Process main loop
@@ -497,8 +492,7 @@ PROCESS_THREAD(krava, ev, data)
 			SENSORS_DEACTIVATE(tmp102);
 		}		
 	}
-	exit:		
-		SENSORS_DEACTIVATE(button_sensor);
+	exit:				
 		SENSORS_DEACTIVATE(battery_sensor);	
 		SENSORS_DEACTIVATE(adxl345);
 		SENSORS_DEACTIVATE(tmp102);	
@@ -524,12 +518,15 @@ PROCESS_THREAD(communication, ev, data)
 	etimer_set(&ackCountInterval, ack_count_interval);
 	mesh_open(&mesh, 14, &callbacks);
 
+	//Initialize sensors
+	SENSORS_ACTIVATE(button_sensor);
+
 	//Process main loop
 	while(1) {
 	 
 		PROCESS_WAIT_EVENT();
 		//set address to address in settings
-		if(ev == sensors_event && data == &button_sensor){
+		if((ev==sensors_event) && (data == &button_sensor)){	
       		setAddress(myAddress_1, myAddress_2);
     	}		
     	//sent message
@@ -549,6 +546,7 @@ PROCESS_THREAD(communication, ev, data)
 			etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 		}
 	}	
+	SENSORS_DEACTIVATE(button_sensor);
 	PROCESS_END();
 }
 

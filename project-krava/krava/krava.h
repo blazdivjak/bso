@@ -57,7 +57,7 @@ static struct etimer neighborTableRinitializeInterval;
 //Networking
 #define DEFAULT_GATEWAY_ADDRESS 0 //falback to default gateway if we cant conntact gateway
 #define CURRENT_GATEWAY_ADDRESS 0
-#define MY_ADDRESS_1 0//1
+#define MY_ADDRESS_1 1//1
 #define MY_ADDRESS_2 0//1
 
 static uint8_t myAddress_1 = MY_ADDRESS_1;
