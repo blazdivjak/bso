@@ -156,7 +156,7 @@
       <viewport>2.7007332327687683 0.0 0.0 2.7007332327687683 36.87051521920381 70.26845799331517</viewport>
     </plugin_config>
     <width>400</width>
-    <z>2</z>
+    <z>3</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -164,14 +164,14 @@
   <plugin>
     org.contikios.cooja.plugins.LogListener
     <plugin_config>
-      <filter />
+      <filter>CLUSTERS</filter>
       <formatted_time />
       <coloring />
     </plugin_config>
-    <width>1520</width>
-    <z>3</z>
-    <height>719</height>
-    <location_x>400</location_x>
+    <width>1204</width>
+    <z>1</z>
+    <height>769</height>
+    <location_x>716</location_x>
     <location_y>160</location_y>
   </plugin>
   <plugin>
@@ -211,11 +211,11 @@
       <interface>Serial port</interface>
       <scrollpos>0,0</scrollpos>
     </plugin_config>
-    <width>791</width>
-    <z>1</z>
-    <height>435</height>
-    <location_x>1112</location_x>
-    <location_y>76</location_y>
+    <width>708</width>
+    <z>2</z>
+    <height>534</height>
+    <location_x>2</location_x>
+    <location_y>403</location_y>
   </plugin>
 </simconf>
 
