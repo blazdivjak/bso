@@ -153,11 +153,14 @@ void handleCommand(CmdMsg *command) {
 
   if(command->cmd == CMD_SET_LOCAL_GW) {
     printf("COMMAND: Set local gateway: %d\n", command->target_id);
-    currentGateway = command->target_id;
-    setPower(15);
 
-    //TODO: Set TX power
-
+    //set gateway
+    if(command->target_id!=node_id){
+    	currentGateway = command->target_id;	
+    	setPower(15);
+    }else{
+    	setPower(CC2420_TXPOWER_MAX);
+    }      
   } else if (command->cmd == CMD_QUERY_MOTE) {
     printf("COMMAND: Query from gateway: %d\n", command->target_id);
     sendMessage();
@@ -187,7 +190,7 @@ void handleEmergencyOne(){
 	mesh_refresh_interval = (CLOCK_SECOND)*30;
 
 	//full power
-	setPower(31);	
+	setPower(CC2420_TXPOWER_MAX);	
 
 }
 
@@ -241,7 +244,7 @@ void toggleEmergencyOne(){
 		currentGateway = DEFAULT_GATEWAY_ADDRESS;
 		mesh_refresh_interval = (CLOCK_SECOND)*30;
 		//Full power & mesh reinitialize
-		setPower(31);		
+		setPower(CC2420_TXPOWER_MAX);		
 
 	}else{		
 		status.ackCounter=0;	
@@ -301,7 +304,7 @@ Power handling
 void setPower(uint8_t powerLevel){
 		
 	txpower = cc2420_get_txpower();
-	printf("POWER: previous: %d Now: %d\n", txpower, powerLevel);
+	printf("POWER: Previous: %d Now: %d\n", txpower, powerLevel);
 	cc2420_set_txpower(powerLevel);	
 
 }
