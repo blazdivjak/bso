@@ -3,10 +3,16 @@
 *__date: 2016-04-15__
 *__project krava__
 */
-#include "contiki.h"
-#include "dev/adxl345.h"
-#include "dev/tmp102.h"     // Include sensor driver
 #include "krava.h"
+
+#define DEBUG 1
+
+#if DEBUG
+#include <stdio.h>
+#define PRINTF(...) printf(__VA_ARGS__)
+#else
+#define PRINTF(...)
+#endif
 
 
 /*
@@ -15,22 +21,22 @@
 
 static void sent(struct mesh_conn *c)
 {
-  printf("NETWORK: packet sent\n");
+  PRINTF("NETWORK: packet sent\n");
 }
 static void timedout(struct mesh_conn *c)
 {
   //TODO: Move this function to ACK receive function
   sendFailedCounter += 1;
-  printf("NETWORK: packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
+  PRINTF("NETWORK: packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
    
-  printf("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
-  // printf("buffer[0]=0x%x\n", (((uint8_t *)packetbuf_dataptr())[0] & 0x03));
+  PRINTF("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  // PRINTF("buffer[0]=0x%x\n", (((uint8_t *)packetbuf_dataptr())[0] & 0x03));
   //ACK
   if(packetbuf_datalen()==1){
-  	printf("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
+  	PRINTF("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
   	ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
   	status.ackCounter+=1;
   }
@@ -39,9 +45,11 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &mNew);
   	printMessage(&mNew);
 
-  	//TODO: If I am gateway add this packets to otherKravaPackets
-
   	//TODO: Send ACK for packet
+  	packetbuf_copyfrom(&mNew.id, 1);
+    mesh_send(&mesh, from); // send ACK
+
+  	//TODO: If I am gateway add this packets to otherKravaPackets
 
   	//TODO: Aggregate packets and send forward
 
@@ -50,19 +58,33 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_CMD){
   	CmdMsg command;
     decodeCmdMsg(packetbuf_dataptr(), &command);
+
+    packetbuf_copyfrom(&command.id, 1);
+    mesh_send(&mesh, from); // send ACK
+
     handleCommand(&command);
   }   
 
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_RSSI){
   	EmergencyMsg eMsg;
   	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
+
+  	packetbuf_copyfrom(&eMsg.id, 1);
+    mesh_send(&mesh, from); // send ACK
+
   	printEmergencyMsg(&eMsg);
+
   } 
 
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_ACC){
   	EmergencyMsg eMsg;
   	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
+
+  	packetbuf_copyfrom(&eMsg.id, 1);
+    mesh_send(&mesh, from); // send ACK
+
   	printEmergencyMsg(&eMsg);
+
   }
 }
 
@@ -72,10 +94,10 @@ Handle gateway commands
 
 void handleCommand(CmdMsg *command) {
   
-  printf("COMMAND: Processing command\n"); 	
+  PRINTF("COMMAND: Processing command\n"); 	
 
   if(command->cmd == CMD_SET_LOCAL_GW) {
-    printf("COMMAND: Set local gateway: %d\n", command->target_id);
+    PRINTF("COMMAND: Set local gateway: %d\n", command->target_id);
 
     //set gateway
     if(command->target_id!=node_id){
@@ -85,19 +107,19 @@ void handleCommand(CmdMsg *command) {
     	setPower(CC2420_TXPOWER_MAX);
     }      
   } else if (command->cmd == CMD_QUERY_MOTE) {
-    printf("COMMAND: Query from gateway: %d\n", command->target_id);
+    PRINTF("COMMAND: Query from gateway: %d\n", command->target_id);
     sendMessage();
   } else if (command->cmd == CMD_EMERGENCY_ONE) {
-    printf("COMMAND: Emergency one, cow unreachable id: %d\n", command->target_id);
+    PRINTF("COMMAND: Emergency one, cow unreachable id: %d\n", command->target_id);
     handleEmergencyOne();
   } else if (command->cmd == CMD_EMERGENCY_TWO) {
-    printf("COMMAND: Emergency two, cow running id: %d\n", command->target_id);
+    PRINTF("COMMAND: Emergency two, cow running id: %d\n", command->target_id);
     handleEmergencyTwo();
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
-    printf("COMMAND: Emergency one cancel, cow id: %d\n", command->target_id);
+    PRINTF("COMMAND: Emergency one cancel, cow id: %d\n", command->target_id);
     cancelEmergencies();
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
-    printf("COMMAND: Emergency two cancel, cow id: %d\n", command->target_id);
+    PRINTF("COMMAND: Emergency two cancel, cow id: %d\n", command->target_id);
     cancelEmergencies();
   }
 }
@@ -109,27 +131,28 @@ Emergency mode handling
 void handleEmergencyOne() {
 
 	//Reconfigure timers
-	printf("EMERGENCY: Searching for lost krava.\n");
+	PRINTF("EMERGENCY: Searching for lost krava.\n");
 	mesh_refresh_interval = (CLOCK_SECOND)*30;
+
+	status.emergencyOne = 2;
 
 	//full power
 	setPower(CC2420_TXPOWER_MAX);	
-
 }
 
 void handleEmergencyTwo() {
 
 	//If I am the running krava dont bother to monitor :)
-	if(status.emergencyTwo==1){
+	if(status.emergencyTwo==1) {
 		return;
 	}
 	//Monitor rssi for this krava
-	else{
-		printf("EMERGENCY: Starting running krava monitoring.\n");
+	else {
+		PRINTF("EMERGENCY: Starting running krava monitoring.\n");
 
 		//Configure broadcast listening timer and sense more offten
 		neighbor_sense_time = (CLOCK_SECOND);		
-		
+		status.emergencyTwo = 2;
 
 		//TODO: save its RSSI to table and sent to Gateway
 
@@ -139,21 +162,26 @@ void handleEmergencyTwo() {
 void cancelEmergencies() {
 
 	//TODO: Reconfigure timers and back to normal operations with all timers
-	printf("Resuming normal operations.\n");
+	PRINTF("Resuming normal operations.\n");
 
 	neighbor_sense_time =  NEIGHBOR_SENSE_TIME;
 	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 	
-	if(status.emergencyOne==2){
+	if(status.emergencyOne != 0) {
 		
 		//TODO: Back to previous power level
 		setPower(txpower);
+
+		status.emergencyOne = 0;
 	}
 	else if(status.emergencyTwo==2){
 		//TODO: Send data
 		sendEmergencyTwoRSSI();
-	} else if(status.emergencyTwo==1) {
+		status.emergencyTwo = 0;
+	} 
+	else if(status.emergencyTwo==1) {
 		sendEmergencyTwoAcc();
+		status.emergencyTwo = 0;
 	}
 
 
@@ -161,8 +189,8 @@ void cancelEmergencies() {
 
 void toggleEmergencyOne() {
 	
-	if(status.ackCounter==0){
-		printf("EMERGENCY: Emergency One triggered.\n");
+	if(status.ackCounter==0) {
+		PRINTF("EMERGENCY: Emergency One triggered.\n");
 		status.emergencyOne = 1;
 		currentGateway = DEFAULT_GATEWAY_ADDRESS;
 		mesh_refresh_interval = (CLOCK_SECOND)*40;
@@ -171,10 +199,10 @@ void toggleEmergencyOne() {
 		//Full power & mesh reinitialize
 		setPower(CC2420_TXPOWER_MAX);		
 
-	}else{		
+	} else {
 		status.ackCounter=0;	
 		/*if(status.emergencyOne==1){
-			printf("EMERGENCY: Emergency One canceled.\n");
+			PRINTF("EMERGENCY: Emergency One canceled.\n");
 			status.emergencyOne=0;
 			mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 		}*/
@@ -191,7 +219,7 @@ static void triggerEmergencyTwo() {
 	}
 	
 	status.emergencyTwo = 1;
-	printf("EMERGENCY: Emergency Two triggered\n");
+	PRINTF("EMERGENCY: Emergency Two triggered\n");
 
 	setCmdMsgId(&command, 32);
 	command.cmd = CMD_EMERGENCY_TWO;
@@ -212,9 +240,10 @@ static void cancelEmergencyTwo() {
 		return;
 	} 
 
-	printf("EMERGENCY: Emergency Two canceled\n");
+	PRINTF("EMERGENCY: Emergency Two canceled\n");
 	status.emergencyTwo = 0;
-	setCmdMsgId(&command, 32);
+	// setCmdMsgId(&command, 32);
+	resetCmdMsg(&command);
 	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
 	command.target_id = m.mote_id;
 	sendCommand();
@@ -230,7 +259,7 @@ Power handling
 void setPower(uint8_t powerLevel) {
 		
 	txpower = cc2420_get_txpower();
-	printf("POWER: Previous: %d Now: %d\n", txpower, powerLevel);
+	PRINTF("POWER: Previous: %d Now: %d\n", txpower, powerLevel);
 	cc2420_set_txpower(powerLevel);	
 
 }
@@ -243,7 +272,7 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2) {
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;
-  printf("NETWORK: My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
+  PRINTF("NETWORK: My Address: %d.%d\n", addr.u8[0],addr.u8[1]);
   uint16_t shortaddr = (addr.u8[0] << 8) + addr.u8[1];
   cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, NULL);   
   linkaddr_set_node_addr (&addr);	
@@ -251,13 +280,13 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2) {
 
 static void setCurrentGateway(uint8_t currentGatewayAddress) {
 
-	printf("NETWORK: Setting current gateway to: %d\n", currentGatewayAddress);
+	PRINTF("NETWORK: Setting current gateway to: %d\n", currentGatewayAddress);
 	currentGateway = currentGatewayAddress;
 }
 
 void sendCommand() {
 	
-	printf("COMMAND: Sending command to my current gateway ID: %d.0, %d bytes\n", currentGateway, CMD_BUFFER_MAX_SIZE);
+	PRINTF("COMMAND: Sending command to my current gateway ID: %d.0, %d bytes\n", currentGateway, CMD_BUFFER_MAX_SIZE);
 
 	linkaddr_t addr_send;     
 	encodeCmdMsg(&command, command_buffer);  
@@ -279,10 +308,10 @@ void sendMessage() {
 
 	linkaddr_t addr_send; 
 	uint8_t size = encodeData(&m, send_buffer);
-	printf("MESSAGES: Sending message to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);	
+	PRINTF("MESSAGES: Sending message to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
 	packetbuf_copyfrom(send_buffer, size);       
 	addr_send.u8[0] = currentGateway;
-	addr_send.u8[1] = 0;	
+	addr_send.u8[1] = 0;
 	mesh_send(&mesh, &addr_send);
 	resetMessage(&m);
 }
@@ -291,7 +320,7 @@ void sendEmergencyTwoRSSI() {
     
 	linkaddr_t addr_send;     
 	uint8_t size = encodeEmergencyMsg(&eTwoRSSI, emergencyBuffer);  
-	printf("EMERGENCY TWO RSSI: Sending to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
+	PRINTF("EMERGENCY TWO RSSI: Sending to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
 	packetbuf_copyfrom(emergencyBuffer, size);       
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;  
@@ -303,7 +332,7 @@ void sendEmergencyTwoAcc() {
     
 	linkaddr_t addr_send;     
 	uint8_t size = encodeEmergencyMsg(&eTwoAcc, emergencyBuffer);  
-	printf("EMERGENCY TWO RSSI: Sending to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
+	PRINTF("EMERGENCY TWO RSSI: Sending to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
 	packetbuf_copyfrom(emergencyBuffer, size);       
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;  
@@ -321,7 +350,7 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 
   int rssi;	
   rssi = readRSSI();
-  //printf("Neighbor advertisment received from %d.%d: '%s' RSSI: %d\n", from->u8[0], from->u8[1], (char *)packetbuf_dataptr(), rssi);
+  //PRINTF("Neighbor advertisment received from %d.%d: '%s' RSSI: %d\n", from->u8[0], from->u8[1], (char *)packetbuf_dataptr(), rssi);
       
   //If emergency
   if((status.emergencyTwo) == 2 && (status.emergencyTarget == from->u8[0])){
@@ -336,7 +365,7 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
   //Check message rssi for adding only close neighbors  
   if (rssi>=rssiTreshold){
   	addNeighbour(&m, from->u8[0]);
-	printf("NETWORK: Neighbor detected adding %d to table. RSSI: %d, Current number of neighbors: %d.\n",from->u8[0],rssi, m.neighbourCount);
+	PRINTF("NETWORK: Neighbor detected adding %d to table. RSSI: %d, Current number of neighbors: %d.\n",from->u8[0],rssi, m.neighbourCount);
   }    
 }
 
@@ -347,7 +376,7 @@ void readBattery(){
   
     //uint16_t bateria = battery_sensor.value(0);
     //float mv = (bateria * 2.500 * 2) / 4096;
-    //printf("Battery: %i (%ld.%03d mV)\n", bateria, (long)mv,(unsigned)((mv - myFloor(mv)) * 1000));
+    //PRINTF("Battery: %i (%ld.%03d mV)\n", bateria, (long)mv,(unsigned)((mv - myFloor(mv)) * 1000));
     m.battery = decodeBattery(battery_sensor.value(0));
 
 }  
@@ -366,21 +395,21 @@ void readMovement(){
 	x = adxl345.value(X_AXIS);
     y = adxl345.value(Y_AXIS);
     z = adxl345.value(Z_AXIS);       
-    //printf("Movement: x: %d y: %d z: %d\n",x, y, z);  
+    //PRINTF("Movement: x: %d y: %d z: %d\n",x, y, z);  
     int64_t acc =  x*x + y*y + z*z;
     average_movement = average_movement + (acc - average_movement)/IIR_STRENGTH;
     if (movement_counter%MOVEMENT_COUNTER_VAL == 0) {
 	    if (average_movement < WALKING_TRESHOLD) {
 	    	addMotion(&m, STANDING);
-	    	//printf("Standing \t");
+	    	//PRINTF("Standing \t");
 	    	cancelEmergencyTwo();
 	    } else if (average_movement < RUNNING_TRESHOLD) {
 	    	addMotion(&m, WALKING);
-	    	//printf("Walking \t");
+	    	//PRINTF("Walking \t");
 	    	cancelEmergencyTwo();
 	    } else {
 	    	addMotion(&m, RUNNING);
-	    	//printf("Running \t");
+	    	//PRINTF("Running \t");
 	    	if (running_counter != 0xFF) {
 	    		running_counter++;
 	    	}
@@ -390,7 +419,7 @@ void readMovement(){
 	    	triggerEmergencyTwo();
 	    }
 
-	    //printf("Acce: %" PRId64 "\tAvg: %" PRId64 "\n", acc, average_movement);
+	    //PRINTF("Acce: %" PRId64 "\tAvg: %" PRId64 "\n", acc, average_movement);
 	}
 	movement_counter++;
 	if (status.emergencyTwo == 1) {
@@ -424,7 +453,7 @@ PROCESS_THREAD(krava, ev, data)
 	PROCESS_EXITHANDLER(goto exit;)
 	PROCESS_BEGIN();
 
-	printf("Sensor sensing process\n");
+	PRINTF("Sensor sensing process\n");
 	status.iAmGateway = 0;
 	status.emergencyOne = 0;
 	status.emergencyTwo = 0;
@@ -486,7 +515,7 @@ PROCESS_THREAD(communication, ev, data)
 	PROCESS_BEGIN();
 
 	resetMessage(&m);
-	printf("Communication process\n");	
+	PRINTF("Communication process\n");	
 	setAddress(node_id, myAddress_2);
 	setCurrentGateway(defaultGateway);	
 		
@@ -513,13 +542,10 @@ PROCESS_THREAD(communication, ev, data)
 			toggleEmergencyOne();
 			etimer_reset(&ackCountInterval);
 		}		
-		//reinitialize mesh if sending failed more than 5 times				
 		if(etimer_expired(&meshRefreshInterval)){
-			printf("NETWORK: Routing table flush\n");					
+			PRINTF("NETWORK: Routing table flush\n");			
 			m.neighbourCount = 0;
-			//printf("NETWORK: Number of routes: %d\n", route_num());
-			route_flush_all();
-			//printf("NETWORK: Number of routes: %d\n", route_num());	
+			route_flush_all();			
 			etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 		}
 	}	
@@ -533,7 +559,7 @@ PROCESS_THREAD(neighbors, ev, data)
 {	
 	//Our process	
 	PROCESS_BEGIN();
-	printf("Neighbor discovery process\n");
+	PRINTF("Neighbor discovery process\n");
 
 	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
 	etimer_set(&neighborSenseInterval, neighbor_sense_interval);
@@ -549,13 +575,13 @@ PROCESS_THREAD(neighbors, ev, data)
 		if(etimer_expired(&neighborSenseInterval)){
 			if(sensing==0){
 				broadcast_open(&broadcast, 129, &broadcast_call);
-				//printf("Sensing for neighbors\n");								
+				//PRINTF("Sensing for neighbors\n");								
 				etimer_set(&neighborSenseInterval, neighbor_sense_time);
 				sensing = 1;
 			}	
 			else{
 				broadcast_close(&broadcast);
-				//printf("Sensing stoped\n");					
+				//PRINTF("Sensing stoped\n");					
 				etimer_set(&neighborSenseInterval, neighbor_sense_interval + random_rand() % (neighbor_sense_interval));
 				sensing = 0;
 			}														
@@ -566,7 +592,7 @@ PROCESS_THREAD(neighbors, ev, data)
 			broadcast_open(&broadcast, 129, &broadcast_call);
  			packetbuf_copyfrom("Hello", 5);    
     		broadcast_send(&broadcast);
-    		//printf("Neighbor advertisment sent\n");
+    		//PRINTF("Neighbor advertisment sent\n");
 			etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval + random_rand() % (neighbor_advertisment_interval));
 			broadcast_close(&broadcast);
 		}				
