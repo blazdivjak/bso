@@ -5,6 +5,15 @@
  */
 #include "gateway.h"
 
+#define DEBUG 1
+
+#if DEBUG
+#include <stdio.h>
+#define PRINTF(...) printf(__VA_ARGS__)
+#else
+#define PRINTF(...)
+#endif
+
 /* Functions for cattle management */
 static char * byte_to_binary(uint32_t x) {
   // converts uint32_t to string where number is represented in binary
@@ -59,7 +68,7 @@ static int find_cow_id_from_bitmap(uint32_t bitmap) {
 /* Command functions */
 static void handleCommand(CmdMsg *command) {
   
-  printf("COMMAND: Processing command\n");
+  PRINTF("COMMAND: Processing command\n");
 
   if (command->cmd == CMD_EMERGENCY_ONE) {
     printf("COMMAND: Emergency one, cow unreachable id: %d\n", command->target_id);
@@ -79,7 +88,7 @@ static void handleCommand(CmdMsg *command) {
 }
 
 static void broadcast_CmdMsg(int command_id, int target) {
-  printf("COMMAND: Broadcasting command %d\n", command_id);
+  PRINTF("COMMAND: Broadcasting command %d\n", command_id);
   setCmdMsgId(&command, 31);
   command.cmd = command_id;
   command.target_id = target;
@@ -102,21 +111,21 @@ static int readRSSI() {
 
 /* Initialize mesh */
 static void sent(struct mesh_conn *c) {
-  //printf("Packet sent\n");
+  //PRINTF("Packet sent\n");
 }
 
 static void timedout(struct mesh_conn *c) {
   sendFailedCounter += 1;
-  printf("MESSAGES: packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
+  PRINTF("MESSAGES: packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
-  printf("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  PRINTF("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
 	
 
   // ACK
   if(packetbuf_datalen()==1){
-    printf("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
+    PRINTF("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
     //ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
   }
   // Krava message
@@ -160,7 +169,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
 
     packetbuf_copyfrom(&command.id, 1);
     mesh_send(&mesh, from); // send ACK
-    
+
     handleCommand(&command);
   }  
 }
@@ -178,17 +187,17 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2) {
 
 /* Timer handlers */
 static void handle_reset_mesh() {
-  printf("NETWORK: Reinitializing Mesh\n");
+  PRINTF("NETWORK: Reinitializing Mesh\n");
   mesh_close(&mesh);
   mesh_open(&mesh, 14, &callbacks);
 }
 
 static void handle_clusters() {
-  printf("CLUSTERS: Timer for cluster refresh expired\n");
+  PRINTF("CLUSTERS: Timer for cluster refresh expired\n");
 
   // Calculate scores for cluster head candidates
   int i;
-  printf("CLUSTERS: Cluster scores: \n");
+  PRINTF("CLUSTERS: Cluster scores: \n");
   for (i = 0; i < NUMBER_OF_COWS; i++) {
     int score = 0;
     score += num_of_neighbours[i] * 1;
@@ -197,9 +206,9 @@ static void handle_clusters() {
     score += batterys[i] / 100;
 
     cluster_scores[i] = score;
-    printf("%d-%d  ", register_cows[i], cluster_scores[i]);
+    PRINTF("%d-%d  ", register_cows[i], cluster_scores[i]);
   }
-  printf("\n");
+  PRINTF("\n");
 
   // TODO: find max nodes upto treshold
 
@@ -305,7 +314,7 @@ PROCESS_THREAD(gateway_main, ev, data)
     }
 
     if (ev == serial_line_event_message && data != NULL) {
-    	printf("SERIAL: received line: %s\n", (char *)data);
+    	PRINTF("SERIAL: received line: %s\n", (char *)data);
       if (!strcmp(CMD_NUMBER_OF_MOTES, data)) {
         char creg[33], cmis[33];
         char * t = byte_to_binary(cows_registered);
