@@ -96,7 +96,7 @@ int main()
 
 	printf("\n\nEmergency Message\n");
 	EmergencyMsg e, eNew;
-	setEmergencyMsgType(&e, MSG_EMERGENCY_ONE);
+	setEmergencyMsgType(&e, MSG_E_TWO_RSSI);
 	setEmergencyMsgId(&e, 7);
 
 	addEmergencyData(&e, 0);

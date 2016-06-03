@@ -3,100 +3,11 @@
 *__date: 2016-04-15__
 *__project krava__
 */
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "contiki.h"
-#include "dev/leds.h"
-#include "dev/button-sensor.h"
-#include "dev/i2cmaster.h"  // Include IC driver
-#include "dev/tmp102.h"     // Include sensor driver
-#include "dev/battery-sensor.h"
 #include "dev/adxl345.h"
-#include "net/rime/rime.h"
-#include "net/rime/mesh.h"
-#include "sys/node-id.h"
-#include "../lib/libsensors.h"
-#include "../lib/libmessage.h"
-#include "random.h"
-#include "cc2420.h"
-//#include "../lib/libmath.h"
+#include "dev/tmp102.h"     // Include sensor driver
+#include "krava.h"
 
-#define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)
-#define RSSI_READ_INTERVAL (CLOCK_SECOND)*5
-#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*360
-#define TEMP_READ_INTERVAL (CLOCK_SECOND)*30
-#define BATTERY_READ_INTERVAL (CLOCK_SECOND)*30
-#define SEND_INTERVAL (CLOCK_SECOND)*30
-#define ACK_COUNT_INTERVAL (CLOCK_SECOND)*120
-
-static unsigned long mesh_refresh_interval = MESH_REFRESH_INTERVAL;
-static unsigned long send_interval = SEND_INTERVAL/2;
-static unsigned long movement_read_interval = MOVEMENT_READ_INTERVAL;
-static unsigned long rssi_read_interval = RSSI_READ_INTERVAL;
-static unsigned long temp_read_intreval = TEMP_READ_INTERVAL;
-static unsigned long battery_read_interval = BATTERY_READ_INTERVAL;
-static unsigned long ack_count_interval = ACK_COUNT_INTERVAL;
-
-//Networking
-#define DEFAULT_GATEWAY_ADDRESS 0 //falback to default gateway if we cant conntact gateway
-#define CURRENT_GATEWAY_ADDRESS 0
-#define MY_ADDRESS_1 0//1
-#define MY_ADDRESS_2 0//1
-
-static uint8_t myAddress_1 = MY_ADDRESS_1;
-static uint8_t myAddress_2 = MY_ADDRESS_2;
-static uint8_t defaultGateway = DEFAULT_GATEWAY_ADDRESS;
-static uint8_t currentGateway = CURRENT_GATEWAY_ADDRESS;
-static uint8_t sendFailedCounter = 0;
-
-//Neighbors and definitions
-#define NEIGHBOR_TABLE_REINITIALIZE_INTERVAL (CLOCK_SECOND)*360
-#define NEIGHBOR_SENSE_INTERVAL (CLOCK_SECOND)*5
-#define NEIGHBOR_SENSE_TIME (CLOCK_SECOND)*1
-#define NEIGHBOR_ADVERTISEMENT_INTERVAL (CLOCK_SECOND)*5
-#define RSSI_TRESHOLD -75
-
-static unsigned long neighbor_table_reinitialize_interval = NEIGHBOR_TABLE_REINITIALIZE_INTERVAL;
-static unsigned long neighbor_sense_interval = NEIGHBOR_SENSE_INTERVAL;
-static unsigned long  neighbor_sense_time = NEIGHBOR_SENSE_TIME;
-static unsigned long  neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
-
-static uint8_t kravaNeighbors[20];
-static uint8_t numberOfNeighbors = 0;
-
-//message buffer
-static uint8_t send_buffer[MESSAGE_BYTE_SIZE_MAX];
-static uint8_t command_buffer[CMD_BUFFER_MAX_SIZE];
-static int rssiTreshold = RSSI_TRESHOLD;
-Message m; //message we save to
-Message mNew; //new message received for decoding
-Packets myPackets; //list of packets sent and waiting to be acked
-Packets otherKravaPackets; //list of packets sent from other kravas if I am gateway
-CmdMsg command;
-
-//Measurement
-#define IIR_STRENGTH 4
-#define MOVEMENT_COUNTER_VAL 2
-#define RUNNING_MAX 5
-#define WALKING_TRESHOLD 100000
-#define RUNNING_TRESHOLD 200000
-static int64_t average_movement = 70000;
-static uint8_t movement_counter = 0;
-static uint8_t running_counter = 0;
-
-//Power
-static uint8_t txpower;
-
-struct {	
-	uint8_t iAmGateway;
-	uint8_t ackCounter;
-	uint8_t emergencyOne;
-	uint8_t emergencyTwo;
-	uint8_t emergencyTarget;
-	uint8_t systemEmergencyOne;
-	uint8_t systemEmergencyTwo;
-} status;
 
 /*
 * Mesh functions
@@ -113,7 +24,7 @@ static void timedout(struct mesh_conn *c)
   printf("NETWORK: packet timedout. Failed to send packet counter: %d\n", sendFailedCounter);
 }
 
-static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
+static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
    
   printf("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
   
@@ -124,7 +35,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
   	status.ackCounter+=1;
   }
   //Krava message
-  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
+  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_MESSAGE){
   	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &mNew);
   	printMessage(&mNew);
 
@@ -136,11 +47,23 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops){
 
   }
   //Gateway command
-  else{
+  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_CMD){
   	CmdMsg command;
     decodeCmdMsg(packetbuf_dataptr(), &command);
     handleCommand(&command);
-  }    
+  }   
+
+  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_RSSI){
+  	EmergencyMsg eMsg;
+  	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
+  	printEmergencyMsg(&eMsg);
+  } 
+
+  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_ACC){
+  	EmergencyMsg eMsg;
+  	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
+  	printEmergencyMsg(&eMsg);
+  }
 }
 
 /*
@@ -183,7 +106,7 @@ void handleCommand(CmdMsg *command) {
 Emergency mode handling
 */
 
-void handleEmergencyOne(){
+void handleEmergencyOne() {
 
 	//Reconfigure timers
 	printf("EMERGENCY: Searching for lost krava.\n");
@@ -194,7 +117,7 @@ void handleEmergencyOne(){
 
 }
 
-void handleEmergencyTwo(){
+void handleEmergencyTwo() {
 
 	//If I am the running krava dont bother to monitor :)
 	if(status.emergencyTwo==1){
@@ -207,12 +130,16 @@ void handleEmergencyTwo(){
 		//Configure broadcast listening timer and sense more offten
 		neighbor_sense_time = (CLOCK_SECOND);		
 		
+		if (addEmergencyData(&eTwoRSSI, (uint8_t) (-1*readRSSI())) == EMERGENCY_DATA_MAX) {
+			//TODO: send emergency msg
+		}
 		//TODO: save its RSSI to table and sent to Gateway
+
 
 	}	
 }
 
-void cancelEmergencies(){
+void cancelEmergencies() {
 
 	//TODO: Reconfigure timers and back to normal operations with all timers
 	printf("Resuming normal operations.\n");
@@ -232,7 +159,7 @@ void cancelEmergencies(){
 
 }
 
-void toggleEmergencyOne(){
+void toggleEmergencyOne() {
 	
 	if (status.emergencyOne == 1) {		
 		return;
@@ -258,7 +185,7 @@ void toggleEmergencyOne(){
 	}	
 }
 
-static void triggerEmergencyTwo(){
+static void triggerEmergencyTwo() {
 	
 	if (status.emergencyTwo == 1) {		
 		return;
@@ -278,7 +205,7 @@ static void triggerEmergencyTwo(){
 
 }
 
-static void cancelEmergencyTwo(){
+static void cancelEmergencyTwo() {
 	
 	running_counter = 0;
 	
@@ -301,7 +228,7 @@ static void cancelEmergencyTwo(){
 Power handling
 */
 
-void setPower(uint8_t powerLevel){
+void setPower(uint8_t powerLevel) {
 		
 	txpower = cc2420_get_txpower();
 	printf("POWER: Previous: %d Now: %d\n", txpower, powerLevel);
@@ -310,15 +237,9 @@ void setPower(uint8_t powerLevel){
 }
 
 /*
-* Initialize mesh
-*/
-static struct mesh_conn mesh;
-const static struct mesh_callbacks callbacks = {recv, sent, timedout};
-
-/*
 * Communication functions
 */
-static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){  
+static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2) {  
   m.mote_id = myAddress_1;
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
@@ -329,29 +250,29 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2){
   linkaddr_set_node_addr (&addr);	
 }
 
-static void setCurrentGateway(uint8_t currentGatewayAddress){
+static void setCurrentGateway(uint8_t currentGatewayAddress) {
 
 	printf("NETWORK: Setting current gateway to: %d\n", currentGatewayAddress);
 	currentGateway = currentGatewayAddress;
 }
 
-void sendCommand(){
+void sendCommand() {
 	
   printf("COMMAND: Sending command to my current gateway ID: %d.0\n", currentGateway);
     
   linkaddr_t addr_send;     
-  encodeCmdMsg(&command, &command_buffer);  
+  encodeCmdMsg(&command, command_buffer);  
   packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);       
   addr_send.u8[0] = currentGateway;
   addr_send.u8[1] = 0;  
   mesh_send(&mesh, &addr_send);
 }
 
-void sendMessage(){
+void sendMessage() {
 	
   printf("MESSAGES: Sending message to my current gateway ID: %d.0\n", currentGateway);
 
-  setMsgID(&m);
+  setMsgID(&m, m.id+1);
   
   //Copy message  
   addMessage(&myPackets, &m);
@@ -361,7 +282,7 @@ void sendMessage(){
   linkaddr_t addr_send; 
   //char msg[2] = {1, 2};
   //packetbuf_copyfrom(msg, 2);
-  uint8_t size = encodeData(&m, &send_buffer);
+  uint8_t size = encodeData(&m, send_buffer);
   packetbuf_copyfrom(send_buffer, size);       
   addr_send.u8[0] = currentGateway;
   addr_send.u8[1] = 0;
@@ -393,11 +314,9 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 	printf("NETWORK: Neighbor detected adding %d to table. RSSI: %d, Current number of neighbors: %d.\n",from->u8[0],rssi, m.neighbourCount);
   }    
 }
-static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
-static struct broadcast_conn broadcast;
 
 /*
-/* Sensor functions															 
+* Sensor functions															 
 */
 void readBattery(){
   
@@ -479,8 +398,6 @@ PROCESS_THREAD(krava, ev, data)
 	status.iAmGateway = 0;
 	status.emergencyOne = 0;
 	status.emergencyTwo = 0;
-	status.systemEmergencyOne = 0;
-	status.systemEmergencyTwo = 0;
 
 	static struct etimer movementReadInterval;
 	static struct etimer temperatureReadInterval;	

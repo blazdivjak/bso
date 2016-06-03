@@ -10,12 +10,12 @@
 #define CMD_BUFFER_MAX_SIZE 4
 // message send array is 128 bytes long
 #define MESSAGE_BYTE_SIZE_MAX 35	// how many bytes a single message can take when completely full
-#define EMERGENCY_DATA_MAX 100
+#define EMERGENCY_DATA_MAX 124
 
 #define MSG_MESSAGE 0
 #define MSG_CMD 1
-#define MSG_EMERGENCY_ONE 2
-#define MSG_EMERGENCY_TWO 3
+#define MSG_E_TWO_RSSI 2
+#define MSG_E_TWO_ACC 3
 
 #define CMD_SET_LOCAL_GW	0	// Set local group gateway. target_id = address of the new local gateway
 #define CMD_QUERY_MOTE 		1   // Send status query to a specific mote
@@ -84,6 +84,7 @@ void encodeCmdMsg(struct CmdMsg *m, uint8_t *buffer);	// Always encodes it to 3 
 void decodeCmdMsg(uint8_t * buffer, struct CmdMsg *m);
 uint8_t setCmdMsgId(struct CmdMsg *m, uint8_t id);
 uint8_t getCmdMsgId(struct CmdMsg *m);
+void resetCmdMsg(struct CmdMsg *m);
 void printCmdMsg(struct CmdMsg *m);
 
 typedef struct EmergencyMsg {
@@ -97,7 +98,7 @@ uint8_t setEmergencyMsgId(struct EmergencyMsg *m, uint8_t id);
 uint8_t getEmergencyMsgId(struct EmergencyMsg *m);
 void setEmergencyMsgType(struct EmergencyMsg *m, uint8_t type);
 uint8_t getEmergencyMsgType(struct EmergencyMsg *m);
-void addEmergencyData(struct EmergencyMsg *m, uint8_t dataPoint);
+uint8_t addEmergencyData(struct EmergencyMsg *m, uint8_t dataPoint);
 void resetEmergencyMsg(struct EmergencyMsg *m);
 
 uint8_t encodeEmergencyMsg(struct EmergencyMsg *m, uint8_t *buffer);	// Always encodes it to 3 bytes (2 x uint8_t)

@@ -38,4 +38,5 @@ upload:
 
 cleanall:
 	$(MAKE) clean -C $(KRAVA_LIB_DIR)
+	$(MAKE) rmo -C $(KRAVA_LIB_DIR)
 	$(MAKE) clean

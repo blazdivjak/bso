@@ -248,6 +248,10 @@ uint8_t getCmdMsgId(struct CmdMsg *m) {
 	return (m->id>>2);
 }
 
+void resetCmdMsg(struct CmdMsg *m) {
+	setCmdMsgId(m, getCmdMsgId(m)+1);
+}
+
 void printCmdMsg(struct CmdMsg *m) {
 	if (m->cmd == CMD_SET_LOCAL_GW) {
 		printf("Set Local gateway command: ");
@@ -310,30 +314,34 @@ uint8_t getEmergencyMsgType(struct EmergencyMsg *m) {
 }
 
 void printEmergencyMsg(struct EmergencyMsg *m) {
-	if (getEmergencyMsgType(m) == MSG_EMERGENCY_ONE) {
-		printf("Emergency one msg: id=%d; dataCount=%d, data:\n", getEmergencyMsgId(m), m->dataCount);
-	} else if (getEmergencyMsgType(m) == MSG_EMERGENCY_TWO) {
-		printf("Emergency two msg: id=%d; dataCount=%d, data:\n", getEmergencyMsgId(m), m->dataCount);
+	uint8_t i;
+	if (getEmergencyMsgType(m) == MSG_E_TWO_RSSI) {
+		printf("Emergency two msg: id=%d; RSSI Count=%d, RSSIs:\n", getEmergencyMsgId(m), m->dataCount);
+		for (i=0; i < m->dataCount; i++) {
+			printf("-%d, ", m->data[i]);
+		}
+		printf("\n");
+	} else if (getEmergencyMsgType(m) == MSG_E_TWO_ACC) {
+		printf("Emergency two msg: id=%d; accelerations Count=%d, accelerations:\n", getEmergencyMsgId(m), m->dataCount);
+		for (i=0; i < m->dataCount; i++) {
+			printf("%d, ", m->data[i]);
+		}
+		printf("\n");
 	} else {
 		printf("Unsupported emergency type\n");
 		return;
 	}
-
-	uint8_t i;
-	for (i=0; i < m->dataCount; i++) {
-		printf("%d, ", m->data[i]);
-	}
-	printf("\n");
-
 }
 
-void addEmergencyData(struct EmergencyMsg *m, uint8_t dataPoint) {
-	uint8_t i = 0;
+uint8_t addEmergencyData(struct EmergencyMsg *m, uint8_t dataPoint) {
+	// uint8_t i = 0;
 
 	if (m->dataCount < EMERGENCY_DATA_MAX) {
 		m->data[m->dataCount] = dataPoint;
 		m->dataCount++;
 	}
+
+	return m->dataCount;
 }
 
 void resetEmergencyMsg(struct EmergencyMsg *m) {
