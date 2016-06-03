@@ -469,33 +469,31 @@ PROCESS_THREAD(krava, ev, data)
 	etimer_set(&rssiReadInterval, rssi_read_interval);
 	etimer_set(&temperatureReadInterval, temp_read_intreval);	
 	
-	//tmp102_init();			
+	//tmp102_init();
+	SENSORS_ACTIVATE(tmp102);
+	SENSORS_ACTIVATE(battery_sensor);
+	SENSORS_ACTIVATE(adxl345);
+	SENSORS_ACTIVATE(tmp102);				
 		
 	//Process main loop
 	while(1) {
 
 		PROCESS_WAIT_EVENT();
 		
-		if(etimer_expired(&movementReadInterval)){
-			SENSORS_ACTIVATE(adxl345);
+		if(etimer_expired(&movementReadInterval)){			
 			readMovement();
-			etimer_set(&movementReadInterval, movement_read_interval);
-			SENSORS_DEACTIVATE(adxl345);
+			etimer_set(&movementReadInterval, movement_read_interval);			
 		}		
-		if(etimer_expired(&temperatureReadInterval)){
-			SENSORS_ACTIVATE(battery_sensor);
-			SENSORS_ACTIVATE(tmp102);
+		if(etimer_expired(&temperatureReadInterval)){									
 			readTemperature();
 			readBattery();			
-			etimer_set(&temperatureReadInterval, temp_read_intreval);
-			SENSORS_DEACTIVATE(battery_sensor);
-			SENSORS_DEACTIVATE(tmp102);
+			etimer_set(&temperatureReadInterval, temp_read_intreval);					
 		}		
 	}
 	exit:				
-		SENSORS_DEACTIVATE(battery_sensor);	
+		SENSORS_DEACTIVATE(battery_sensor);
 		SENSORS_DEACTIVATE(adxl345);
-		SENSORS_DEACTIVATE(tmp102);	
+		SENSORS_DEACTIVATE(tmp102);
 		leds_off(LEDS_ALL);
 		PROCESS_END();
 }
