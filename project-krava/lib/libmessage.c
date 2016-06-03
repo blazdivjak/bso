@@ -24,7 +24,7 @@ uint8_t setMsgId (struct Message *m, uint8_t id) {
 	if (id > 0x3F) {
 		id = id % 0x3F;
 	}
-	m->id = (id<<2) | (m->id & 0x03);
+	m->id = (id<<2) | MSG_MESSAGE;
 	return id;
 }
 
@@ -240,7 +240,7 @@ uint8_t setCmdMsgId(struct CmdMsg *m, uint8_t id) {
 	if (id > 0x3F) {
 		id = id % 0x3F;
 	}
-	m->id = (id<<2) | (m->id & 0x03);
+	m->id = (id<<2) | MSG_CMD ;
 	return id;
 }
 
