@@ -8,7 +8,6 @@
   <project EXPORT="discard">[APPS_DIR]/powertracker</project>
   <simulation>
     <title>krava</title>
-    <speedlimit>2.0</speedlimit>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -137,7 +136,7 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>280</width>
-    <z>1</z>
+    <z>2</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -153,7 +152,7 @@
       <viewport>5.992976717309174 0.0 0.0 5.992976717309174 -116.09489435148268 -107.8566094917773</viewport>
     </plugin_config>
     <width>400</width>
-    <z>2</z>
+    <z>3</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -165,9 +164,9 @@
       <formatted_time />
       <coloring />
     </plugin_config>
-    <width>1520</width>
+    <width>889</width>
     <z>0</z>
-    <height>523</height>
+    <height>613</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
   </plugin>
@@ -195,8 +194,8 @@
       <notes>Enter notes here</notes>
       <decorations>true</decorations>
     </plugin_config>
-    <width>1240</width>
-    <z>3</z>
+    <width>606</width>
+    <z>1</z>
     <height>160</height>
     <location_x>680</location_x>
     <location_y>0</location_y>

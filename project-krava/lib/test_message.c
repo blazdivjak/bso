@@ -17,6 +17,8 @@ int main()
 
 
 	printf("Adding motions reading \n");
+	m.mote_id = 5;
+	m.temp = 21;
 	addMotion(&m, 0);
 	addMotion(&m, 1);
 	addMotion(&m, 2);
