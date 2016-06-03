@@ -307,14 +307,11 @@ void sendMessage() {
 	//TODO: Poslji komplet pakete
 
 	linkaddr_t addr_send; 
-	//char msg[2] = {1, 2};
-	//packetbuf_copyfrom(msg, 2);
 	uint8_t size = encodeData(&m, send_buffer);
 	PRINTF("MESSAGES: Sending message to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
 	packetbuf_copyfrom(send_buffer, size);       
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;
-	//PRINTF("Mesh status: %d\n", mesh_ready(&mesh));
 	mesh_send(&mesh, &addr_send);
 	resetMessage(&m);
 }
@@ -358,7 +355,7 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
   //If emergency
   if((status.emergencyTwo) == 2 && (status.emergencyTarget == from->u8[0])){
   	
-  	//TODO: Save to RSSI mesurements for lost krava
+  	//Save to RSSI mesurements for lost krava
 	if (addEmergencyData(&eTwoRSSI, (uint8_t) (-1*readRSSI())) == EMERGENCY_DATA_MAX-1) {
 		sendEmergencyTwoRSSI();
 	}
@@ -545,16 +542,10 @@ PROCESS_THREAD(communication, ev, data)
 			toggleEmergencyOne();
 			etimer_reset(&ackCountInterval);
 		}		
-		//reinitialize mesh if sending failed more than 5 times
-		//TODO: SendFailedCounter=queue length
-		//if(sendFailedCounter%10==0){
-		if(etimer_expired(&meshRefreshInterval)){ //TODO: Fix etimer expired
-			PRINTF("NETWORK: Closing Mesh\n");
-			mesh_close(&mesh);
+		if(etimer_expired(&meshRefreshInterval)){
+			PRINTF("NETWORK: Routing table flush\n");			
 			m.neighbourCount = 0;
-			mesh_open(&mesh, 14, &callbacks);
-			PRINTF("NETWORK: Initializing Mesh\n");			
-			//sendFailedCounter+=10;
+			route_flush_all();			
 			etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 		}
 	}	

@@ -187,9 +187,9 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2) {
 
 /* Timer handlers */
 static void handle_reset_mesh() {
-  PRINTF("NETWORK: Reinitializing Mesh\n");
-  mesh_close(&mesh);
-  mesh_open(&mesh, 14, &callbacks);
+
+  PRINTF("NETWORK: Routing table flush\n");
+  route_flush_all();
 }
 
 static void handle_clusters() {
