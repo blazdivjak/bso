@@ -272,7 +272,6 @@ static void sendClusteringCommand(struct Cluster *c){
   }
 
   // send command to cluster head
-  command.target_id = GATEWAY_ADDRESS;
   addr.u8[0] = c->head;
   PRINTF("CLUSTERS: Sending Command SET LOCAL GW to cluster head %d.0 where target is %d.0\n", addr.u8[0], command.target_id);
   mesh_send(&mesh, &addr);
