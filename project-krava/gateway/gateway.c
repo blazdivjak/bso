@@ -242,12 +242,12 @@ static int memberInCluster(struct Cluster *c, uint8_t member) {
 }
 
 static void printCluster(struct Cluster *c) {
-  printf("CLUSTERS: Cluster %d constains %d members:", c->head, c->members_count);
+  PRINTF("CLUSTERS: Cluster %d constains %d members:", c->head, c->members_count);
   int i;
   for (i = 0; i < c->members_count; i++) {
-    printf("%d ", c->members[i]);
+    PRINTF("%d ", c->members[i]);
   }
-  printf("\n");
+  PRINTF("\n");
 }
 
 static void handle_clusters() {
@@ -279,15 +279,15 @@ static void handle_clusters() {
       cluster_candidates[i] = -1;
     }
   }
-  printf("CLUSTERS: found %d potential clusters\n", cluster_candidates_count);
+  PRINTF("CLUSTERS: found %d potential clusters\n", cluster_candidates_count);
   if (cluster_candidates_count == 0) {
     return;
   }
-  printf("CLUSTERS: Potencial clusters are: ");
+  PRINTF("CLUSTERS: Potencial clusters are: ");
   for (i = 0; i < NUMBER_OF_COWS; i++){
-    printf("%d ", cluster_candidates[i]);
+    PRINTF("%d ", cluster_candidates[i]);
   }
-  printf("\n");
+  PRINTF("\n");
   // Choose cluster heads
   int clusters_count = 0;
   struct Cluster clusters[NUMBER_OF_COWS];
@@ -300,12 +300,12 @@ static void handle_clusters() {
     for (j = 0; j < clusters_count; j++) { // check if new head already in any of clusters
       if (memberInCluster(&clusters[j], cluster_candidates[i])) {
         new_head_already_in_cluster = 1;
-        printf("CLUSTERS: candidate %d found in %d\n", cluster_candidates[i], clusters[j].head);
+        PRINTF("CLUSTERS: candidate %d found in %d\n", cluster_candidates[i], clusters[j].head);
         break;
       }
     }
     if (!new_head_already_in_cluster) { // cluster can be added but not sure if all members also - filtering
-      printf("CLUSTERS: Adding mote %d to clusters!\n", cluster_candidates[i]);
+      PRINTF("CLUSTERS: Adding mote %d to clusters!\n", cluster_candidates[i]);
       struct Cluster c;
       c.members_count = 0;
       c.head = cluster_candidates[i];
@@ -320,14 +320,14 @@ static void handle_clusters() {
         }
         if (!new_head_already_in_cluster) {
           clusterAddMember(&c, neighbours[find_cow_with_id(cluster_candidates[i])][n]);
-          printf("CLUSTERS: adding member %d to cluster %d\n", neighbours[find_cow_with_id(cluster_candidates[i])][n], cluster_candidates[i]);
+          PRINTF("CLUSTERS: adding member %d to cluster %d\n", neighbours[find_cow_with_id(cluster_candidates[i])][n], cluster_candidates[i]);
         }
       }
       clusters[clusters_count] = c;
       clusters_count += 1;
     }
   }
-  printf("CLUSTERS: %d clusters are forwarded to filtering\n", clusters_count);
+  PRINTF("CLUSTERS: %d clusters are forwarded to filtering\n", clusters_count);
   if (clusters_count == 0) {
     return;
   }
@@ -335,21 +335,22 @@ static void handle_clusters() {
   int final_cluster_count = 0;
   struct Cluster final_clusters[NUMBER_OF_COWS];
   for (i = 0; i < clusters_count; i++) {
-    printf("CLUSTERS: Cluster %d contains %d members\n", clusters[i].head, clusters[i].members_count);
+    PRINTF("CLUSTERS: Cluster %d contains %d members\n", clusters[i].head, clusters[i].members_count);
     if (clusters[i].members_count > 0) {
       final_clusters[final_cluster_count] = clusters[i];
       final_cluster_count += 1;
-    } else {
     }
   }
-  printf("CLUSTERS: %d clusters are not empty after filtering\n", final_cluster_count);
+  printf("CLUSTERS: %d clusters generated\n", final_cluster_count);
   if (final_cluster_count == 0) {
     return;
   }
   for (i=0; i < final_cluster_count; i++) {
     printCluster(&final_clusters[i]);
   }
-  // TODO: Send cluster generation commands
+  
+  // Send cluster generation commands
+  
 
 
 }
