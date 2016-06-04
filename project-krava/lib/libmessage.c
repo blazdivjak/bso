@@ -316,13 +316,13 @@ uint8_t getEmergencyMsgType(struct EmergencyMsg *m) {
 void printEmergencyMsg(struct EmergencyMsg *m) {
 	uint8_t i;
 	if (getEmergencyMsgType(m) == MSG_E_TWO_RSSI) {
-		printf("Emergency two msg: id=%d; RSSI Count=%d, RSSIs:\n", getEmergencyMsgId(m), m->dataCount);
+		printf("Emergency two msg: id=%d, Mote ID=%d, RSSI Count=%d, RSSIs:\n", getEmergencyMsgId(m), m->mote_id, m->dataCount);
 		for (i=0; i < m->dataCount; i++) {
 			printf("-%d, ", m->data[i]);
 		}
 		printf("\n");
 	} else if (getEmergencyMsgType(m) == MSG_E_TWO_ACC) {
-		printf("Emergency two msg: id=%d; accelerations Count=%d, accelerations:\n", getEmergencyMsgId(m), m->dataCount);
+		printf("Emergency two msg: id=%d, Mote ID=%d, accelerations Count=%d, accelerations:\n", getEmergencyMsgId(m), m->mote_id, m->dataCount);
 		for (i=0; i < m->dataCount; i++) {
 			printf("%d, ", m->data[i]);
 		}

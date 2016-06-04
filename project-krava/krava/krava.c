@@ -42,16 +42,18 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   }
   //Krava message
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_MESSAGE){
-  	Message fMsg;
+  	//Send ACK for packet  	
+  	packetbuf_copyfrom(packetbuf_dataptr(), 1);
+    mesh_send(&mesh, from); // send ACK
+
+    #ifdef DEBUG
+    Message fMsg;
   	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &fMsg);
   	printMessage(&fMsg);
-
-  	//Send ACK for packet  	
-  	packetbuf_copyfrom(&fMsg.id, 1);
-    mesh_send(&mesh, from); // send ACK
+  	#endif
   	
   	//Forward message
-	forwardMessage(fMsg);
+	forward(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen());
 
   }
   //Gateway command
@@ -65,40 +67,24 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     handleCommand(&command);
   }   
   /*
-  IF I am local gateway I can also receive RSSI mesurements from cows in my cluster  and
+  IF I am local gateway I can also receive RSSI or ACCELEROMETER mesurements from cows in my cluster  and
   I need to forward them to default gateway
   */
-  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_RSSI){
-  	EmergencyMsg eMsg;
-  	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
-
-  	packetbuf_copyfrom(&eMsg.id, 1);
+  else {
+  	//Send ACK for packet  	
+  	packetbuf_copyfrom(packetbuf_dataptr(), 1);
     mesh_send(&mesh, from); // send ACK
 
+    #ifdef DEBUG
+    EmergencyMsg eMsg;
+	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
   	printEmergencyMsg(&eMsg);
+  	#endif
 
   	//Forward emergency
-  	forwardEmergency(eMsg);
-
+	forward(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen());
   } 
 
-  /*
-  IF I am local gateway I can also receive ACCELEROMETER from cows in my cluster and I need
-  to forward them to default gateway
-  */
-  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_ACC) {
-  	EmergencyMsg eMsg;
-  	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
-
-  	packetbuf_copyfrom(&eMsg.id, 1);
-    mesh_send(&mesh, from); // send ACK
-
-  	printEmergencyMsg(&eMsg);
-
-  	//Forward emergency
-  	forwardEmergency(eMsg);
-
-  }
 }
 
 /*
@@ -317,26 +303,14 @@ void sendCommand() {
 	resetCmdMsg(&command);
 }
 
-void forwardEmergency(EmergencyMsg eMsg) {
-					
+void forward(uint8_t *buffer, uint8_t length) {
+	PRINTF("MESSAGES: Forwarding message type=%u id=%u to current gateway: %d.0\n", 
+		(buffer[0]&0x3), (buffer[0]>>2), currentGateway);
 	linkaddr_t addr_send;
-	uint8_t size = encodeEmergencyMsg(&eMsg, emergency_forward_buffer);
-	PRINTF("MESSAGES: Forwarding EMERGENCY to current gateway: %d.0\n", currentGateway);
-	packetbuf_copyfrom(emergency_forward_buffer, size);       
+	packetbuf_copyfrom(buffer, length);
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;
-	mesh_send(&mesh, &addr_send);	
-}
-
-void forwardMessage(Message fMsg) {
-					
-	linkaddr_t addr_send;
-	uint8_t size = encodeData(&fMsg, message_forward_buffer);
-	PRINTF("MESSAGES: Forwarding message to current gateway: %d.0\n", currentGateway);
-	packetbuf_copyfrom(message_forward_buffer, size);       
-	addr_send.u8[0] = currentGateway;
-	addr_send.u8[1] = 0;
-	mesh_send(&mesh, &addr_send);	
+	mesh_send(&mesh, &addr_send);
 }
 
 void sendMessage() {

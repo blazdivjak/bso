@@ -80,10 +80,8 @@ static unsigned long  neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_IN
 
 //message buffer
 static uint8_t send_buffer[MESSAGE_BYTE_SIZE_MAX];
-static uint8_t message_forward_buffer[MESSAGE_BYTE_SIZE_MAX];
 static uint8_t command_buffer[CMD_BUFFER_MAX_SIZE];
 static uint8_t emergencyBuffer[EMERGENCY_DATA_MAX+4];
-static uint8_t emergency_forward_buffer[EMERGENCY_DATA_MAX+4];
 static int rssiTreshold = RSSI_TRESHOLD;
 
 Message m; //message we save to
@@ -146,11 +144,10 @@ void setPower(uint8_t powerLevel);
 static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2);
 static void setCurrentGateway(uint8_t currentGatewayAddress);
 void sendCommand();
-void forwardEmergency(EmergencyMsg eMsg);
-void forwardMessage(Message fMsg);
 void sendMessage();
 void sendEmergencyTwoRSSI();
 void sendEmergencyTwoAcc();
+void forward(uint8_t *buffer, uint8_t length);
 
 /*
 * Initialize broadcast connection
