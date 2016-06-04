@@ -45,13 +45,16 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &mNew);
   	printMessage(&mNew);
 
-  	//TODO: Send ACK for packet
+  	//Send ACK for packet
   	packetbuf_copyfrom(&mNew.id, 1);
     mesh_send(&mesh, from); // send ACK
 
-  	//TODO: If I am gateway add this packets to otherKravaPackets
-
-  	//TODO: Aggregate packets and send forward
+  	//Sent packet forward if I am gateway
+  	if(status.iAmGateway){
+		PRINTF("MESSAGES: Forwarding message from :%d.%d to current gateway: %d.0\n", from->u8[0], from->u8[1], currentGateway);
+		packetbuf_copyfrom(packetbuf_dataptr(), packetbuf_datalen());
+    	mesh_send(&mesh, from); // send message from other krava to gateway
+  	}
 
   }
   //Gateway command
@@ -101,11 +104,15 @@ void handleCommand(CmdMsg *command) {
 
     //set gateway
     if(command->target_id!=node_id){
+    	PRINTF("COMMAND: Setting new Gateway.\n");
+    	status.iAmGateway = 0;
     	currentGateway = command->target_id;	
     	
     	//TODO: Change power based on RSSI and also adjust RSSI for neighbor detection
     	setPower(15);
     }else{
+    	PRINTF("COMMAND: I am new local gateway.\n");
+    	status.iAmGateway = 1;
     	setPower(CC2420_TXPOWER_MAX);
     }      
   } else if (command->cmd == CMD_QUERY_MOTE) {
