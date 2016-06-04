@@ -123,7 +123,7 @@ void handleCommand(CmdMsg *command) {
     handleEmergencyOne();
   } else if (command->cmd == CMD_EMERGENCY_TWO) {
     PRINTF("COMMAND: Emergency two, cow running id: %d\n", command->target_id);
-    handleEmergencyTwo();
+    handleEmergencyTwo(command->target_id);
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
     PRINTF("COMMAND: Emergency one cancel, cow id: %d\n", command->target_id);
     cancelSysEmergencyOne();
@@ -149,10 +149,10 @@ void handleEmergencyOne() {
 	setPower(CC2420_TXPOWER_MAX);	
 }
 
-void handleEmergencyTwo() {
+void handleEmergencyTwo(uint8_t target) {
 
 	//If I am the running krava dont bother to monitor :)
-	if(status.emergencyTwo==1) {
+	if(status.emergencyTwo==1 || m.mote_id == target) {
 		return;
 	}
 	//Monitor rssi for this krava
@@ -162,6 +162,7 @@ void handleEmergencyTwo() {
 		//Configure broadcast listening timer and sense more offten
 		neighbor_sense_time = (CLOCK_SECOND);		
 		status.emergencyTwo = 2;
+		status.emergencyTarget = target;
 	}	
 }
 
@@ -227,7 +228,6 @@ static void triggerEmergencyTwo() {
 	status.emergencyTwo = 1;
 	PRINTF("EMERGENCY: Emergency Two triggered\n");
 
-	// setCmdMsgId(&command, 32);
 	resetCmdMsg(&command);
 	command.cmd = CMD_EMERGENCY_TWO;
 	command.target_id = m.mote_id;
@@ -249,7 +249,6 @@ static void cancelEmergencyTwo() {
 
 	PRINTF("EMERGENCY: Emergency Two canceled\n");
 	status.emergencyTwo = 0;
-	// setCmdMsgId(&command, 32);
 	resetCmdMsg(&command);
 	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
 	command.target_id = m.mote_id;
@@ -358,13 +357,13 @@ static void broadcast_recv(struct broadcast_conn *c, const linkaddr_t *from)
 
   int rssi;	
   rssi = readRSSI();
-  //PRINTF("Neighbor advertisment received from %d.%d: '%s' RSSI: %d\n", from->u8[0], from->u8[1], (char *)packetbuf_dataptr(), rssi);
+  PRINTF("Neighbor advertisment received from %d.%d: '%s' RSSI: %d, eTarget: %d, emergencyTwo: %d\n", from->u8[0], from->u8[1], (char *)packetbuf_dataptr(), rssi, status.emergencyTarget, status.emergencyTwo);
       
   //If emergency
-  if((status.emergencyTwo) == 2 && (status.emergencyTarget == from->u8[0])){
-  	
+  if((status.emergencyTwo == 2) && (status.emergencyTarget == from->u8[0])){
+  	PRINTF("EMERGENCY Adding RSSI to eTwoRSSI\n");
   	//Save to RSSI mesurements for lost krava
-	if (addEmergencyData(&eTwoRSSI, (uint8_t) (-1*readRSSI())) == EMERGENCY_DATA_MAX-1) {
+	if (addEmergencyData(&eTwoRSSI, (uint8_t) (-1*readRSSI())) == EMERGENCY_DATA_MAX) {
 		sendEmergencyTwoRSSI();
 	}
 
@@ -432,7 +431,6 @@ void readMovement(){
 	movement_counter++;
 	if (status.emergencyTwo == 1) {
 		if (addEmergencyData(&eTwoAcc, (uint8_t) (acc/10000)) == EMERGENCY_DATA_MAX) {
-		// if (addEmergencyData(&eTwoAcc, (uint8_t) (acc/10000)) == 100) {
 			PRINTF("EMERGENCY #2 Accelerations full\n");
 			sendEmergencyTwoAcc();
 		}

@@ -111,7 +111,7 @@ struct {
 	uint8_t iAmGateway : 1;
 	uint8_t emergencyOne : 2;
 	uint8_t emergencyTwo : 2;
-	uint8_t emergencyTarget : 1;
+	uint8_t emergencyTarget : 8;
 	uint8_t ackCounter : 8;
 } status;
 
@@ -132,7 +132,7 @@ const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 void handleCommand(CmdMsg *command);
 // Emergency mode handling
 void handleEmergencyOne();
-void handleEmergencyTwo();
+void handleEmergencyTwo(uint8_t target);
 void cancelSysEmergencyOne();
 void cancelSysEmergencyTwo();
 void toggleEmergencyOne();
