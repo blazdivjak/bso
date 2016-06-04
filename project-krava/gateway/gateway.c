@@ -149,11 +149,16 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     // find cows index in data structures
     int cow_index = find_cow_with_id(m.mote_id);
 
+
+    // update hops count
+    myhops[cow_index] = hops;
+
     // update info on how many times the cow is seen
     cows_seen_counter[cow_index] += 1;
     cows_seen_counter_status |= 1 << cow_index;
     
     // update status of sensors for each cow
+    num_of_motions[cow_index] = m.motionCount;
     motions[cow_index] = m.motions;
     batterys[cow_index] = m.battery;
     num_of_neighbours[cow_index] = m.neighbourCount;
@@ -192,29 +197,148 @@ static void handle_reset_mesh() {
   route_flush_all();
 }
 
-static void handle_clusters() {
-  PRINTF("CLUSTERS: Timer for cluster refresh expired\n");
+static int get_average_motion(uint64_t motions, int motions_count) {
+  // decodes motions and returns the average
+  uint8_t motion_buffer[32];
+  int sum = 0;
+  int i;
+  uint64_t tmp = motions;
+  for (i = 0; i < motions_count; i++) {
+    motion_buffer[i] = (uint8_t) (tmp & 0x03);
+    tmp = tmp >> 2;
+  }
+  int num = sum / motions_count;
+  return motion_buffer[0];
+}
 
+static void clusterAddMember(struct Cluster *c, uint8_t member) {
+  c->members[c->members_count] = member;
+  c->members_count++;
+}
+
+static int memberInCluster(struct Cluster *c, uint8_t member) {
+  if (c->head == member) {
+    return 1;
+  }
+  int i = 0;
+  for (i = 0; i < c->members_count; i++) {
+    if (c->members[i] == member) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static void printCluster(struct Cluster *c) {
+  printf("CLUSTERS: Cluster %d constains %d members:", c->head, c->members_count);
+  int i;
+  for (i = 0; i < c->members_count; i++) {
+    printf("%d ", c->members[i]);
+  }
+  printf("\n");
+}
+
+static void handle_clusters() {
+  printf("CLUSTERS: Timer for cluster refresh expired\n");
   // Calculate scores for cluster head candidates
   int i;
-  PRINTF("CLUSTERS: Cluster scores: \n");
+  printf("CLUSTERS: Cluster scores: ");
   for (i = 0; i < NUMBER_OF_COWS; i++) {
-    int score = 0;
-    score += num_of_neighbours[i] * 1;
-    score += motions[i] * -1;
-    score += hops[i] * 2;
-    score += batterys[i] / 100;
-
+    int s_neighb = num_of_neighbours[i] * CLUSTER_FORMULA_WEIGHT_NUM_NEIGHBOURS;
+    int s_motion = get_average_motion(motions[i], num_of_motions[i]) * -CLUSTER_FORMULA_WEIGHT_NUM_MOTION; 
+    int s_myhops = myhops[i] * -CLUSTER_FORMULA_WEIGHT_NUM_HOPS;
+    int s_batter = ((batterys[i] / 10) / 2) * CLUSTER_FORMULA_WEIGHT_NUM_BATTERY; // numers from 0 to 5 * WEIGHT
+    // TODO: score += RSSI
+    int score = 0 + s_neighb + s_motion + s_myhops + s_batter;
+    //printf("CLUSTERS: i: %d N: %d + M: %d + H: %d + B: %d = %d\n", 
+    //  i, s_neighb, s_motion, s_myhops, s_batter, score);
     cluster_scores[i] = score;
-    PRINTF("%d-%d  ", register_cows[i], cluster_scores[i]);
+    printf("%d:%d  ", register_cows[i], cluster_scores[i]);
   }
-  PRINTF("\n");
-
-  // TODO: find max nodes upto treshold
-
-  // TODO: Create clusters 
-
+  printf("\n");
+  // find potencial clusters with score greather than treshold
+  int cluster_candidates_count = 0;
+  int cluster_candidates[NUMBER_OF_COWS];
+  for (i = 0; i < NUMBER_OF_COWS; i++) {
+    if (cluster_scores[i] > CLUSTER_FORMULA_TRESHOLD) {
+      cluster_candidates[i] = register_cows[i];
+      cluster_candidates_count += 1;
+    } else {
+      cluster_candidates[i] = -1;
+    }
+  }
+  printf("CLUSTERS: found %d potential clusters\n", cluster_candidates_count);
+  if (cluster_candidates_count == 0) {
+    return;
+  }
+  printf("CLUSTERS: Potencial clusters are: ");
+  for (i = 0; i < NUMBER_OF_COWS; i++){
+    printf("%d ", cluster_candidates[i]);
+  }
+  printf("\n");
+  // Choose cluster heads
+  int clusters_count = 0;
+  struct Cluster clusters[NUMBER_OF_COWS];
+  for (i = 0; i < NUMBER_OF_COWS; i++) {
+    if (cluster_candidates[i] == -1) {
+      continue; // mote not candidate
+    }
+    int new_head_already_in_cluster = 0;
+    int j = 0;
+    for (j = 0; j < clusters_count; j++) { // check if new head already in any of clusters
+      if (memberInCluster(&clusters[j], cluster_candidates[i])) {
+        new_head_already_in_cluster = 1;
+        printf("CLUSTERS: candidate %d found in %d\n", cluster_candidates[i], clusters[j].head);
+        break;
+      }
+    }
+    if (!new_head_already_in_cluster) { // cluster can be added but not sure if all members also - filtering
+      printf("CLUSTERS: Adding mote %d to clusters!\n", cluster_candidates[i]);
+      struct Cluster c;
+      c.members_count = 0;
+      c.head = cluster_candidates[i];
+      int n;
+      for (n = 0; n < num_of_neighbours[find_cow_with_id(cluster_candidates[i])]; n++) {
+        new_head_already_in_cluster = 0;
+        int j = 0;
+        for (j = 0; j < clusters_count; j++) { // check if neighbour already in any of clusters
+          if (memberInCluster(&clusters[j], neighbours[find_cow_with_id(cluster_candidates[i])][n])) {
+            new_head_already_in_cluster = 1;
+          }
+        }
+        if (!new_head_already_in_cluster) {
+          clusterAddMember(&c, neighbours[find_cow_with_id(cluster_candidates[i])][n]);
+          printf("CLUSTERS: adding member %d to cluster %d\n", neighbours[find_cow_with_id(cluster_candidates[i])][n], cluster_candidates[i]);
+        }
+      }
+      clusters[clusters_count] = c;
+      clusters_count += 1;
+    }
+  }
+  printf("CLUSTERS: %d clusters are forwarded to filtering\n", clusters_count);
+  if (clusters_count == 0) {
+    return;
+  }
+  // filter out clusters with zero members
+  int final_cluster_count = 0;
+  struct Cluster final_clusters[NUMBER_OF_COWS];
+  for (i = 0; i < clusters_count; i++) {
+    printf("CLUSTERS: Cluster %d contains %d members\n", clusters[i].head, clusters[i].members_count);
+    if (clusters[i].members_count > 0) {
+      final_clusters[final_cluster_count] = clusters[i];
+      final_cluster_count += 1;
+    } else {
+    }
+  }
+  printf("CLUSTERS: %d clusters are not empty after filtering\n", final_cluster_count);
+  if (final_cluster_count == 0) {
+    return;
+  }
+  for (i=0; i < final_cluster_count; i++) {
+    printCluster(&final_clusters[i]);
+  }
   // TODO: Send cluster generation commands
+
 
 }
 

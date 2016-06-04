@@ -40,7 +40,7 @@ static uint8_t sendFailedCounter = 0;
 
 // cows registered and present in network
 #define MAX_NUMBER_OF_COWS 32
-#define NUMBER_OF_COWS 1//3
+#define NUMBER_OF_COWS 3
 static int register_cows[NUMBER_OF_COWS] = {1, 2, 3}; // register cow addresses
 static uint32_t cows_registered = 0; // bitmap for registered cows
 static uint32_t cows_missing = 0; // bitmap for missing cows
@@ -51,11 +51,22 @@ static uint8_t cows_seen_alarm_window = COWS_SEEN_ALARM_WINDOW;
 
 // cows sensors reading storage
 static uint8_t batterys[NUMBER_OF_COWS];
-static uint8_t motions[NUMBER_OF_COWS];
+static uint8_t num_of_motions[NUMBER_OF_COWS];
+static uint64_t motions[NUMBER_OF_COWS];
 static uint8_t num_of_neighbours[NUMBER_OF_COWS];
 static uint8_t neighbours[NUMBER_OF_COWS][NUMBER_OF_COWS];
-static uint8_t hops[NUMBER_OF_COWS];
-// clusters
+static uint8_t myhops[NUMBER_OF_COWS];
+ // clusters
+struct Cluster{
+	uint8_t head;
+	uint8_t members_count;
+	uint8_t members[NUMBER_OF_COWS];
+} Cluster;
+#define CLUSTER_FORMULA_TRESHOLD 3
+#define CLUSTER_FORMULA_WEIGHT_NUM_NEIGHBOURS 5 // values from 0 to n * WEIGHT
+#define CLUSTER_FORMULA_WEIGHT_NUM_MOTION 1 // values from 0 to 2 * WEIGHT
+#define CLUSTER_FORMULA_WEIGHT_NUM_HOPS 1 // values from 0 to n * WEIGHT
+#define CLUSTER_FORMULA_WEIGHT_NUM_BATTERY 1 // valuse from 1 to 5 * WEIGHT
 static uint8_t cluster_counts[NUMBER_OF_COWS];  // number of cows in cluster
 static uint32_t clusters[NUMBER_OF_COWS];  // cluster ids
 static int cluster_scores[NUMBER_OF_COWS];  // scores for each cluster candidate
