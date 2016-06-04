@@ -397,8 +397,9 @@ static void handle_missing_cows() {
     // disable alarm one - all cows are found
     status.emergency_missing = 0;
     cows_seen_alarm_window = COWS_SEEN_ALARM_WINDOW;
-    //if (old_emergency_missing != 0) { // only send cancel if previous command was alarm
-    broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, target);
+    if (old_emergency_missing ^ status.emergency_missing) { // only send cancel if previous command was alarm
+      broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, target);
+    }
   }
 
   // disable alarm if its on for more than cows seen alarm window
