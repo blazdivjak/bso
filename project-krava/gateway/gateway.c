@@ -260,15 +260,22 @@ static void sendClusteringCommand(struct Cluster *c){
   encodeCmdMsg(&command, command_buffer);
   packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
 
+  // send command to cluster members
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;
   int i;
   for (i = 0; i < c->members_count; i++) {
     addr.u8[0] = c->members[i];
-    PRINTF("CLUSTERS: Sending Command SET LOCAL GW to %d.0 where target is %d.0\n", addr.u8[0], c->head);
+    PRINTF("CLUSTERS: Sending Command SET LOCAL GW to %d.0 where target is %d.0\n", addr.u8[0], command.target_id);
     mesh_send(&mesh, &addr);
   }
+
+  // send command to cluster head
+  command.target_id = GATEWAY_ADDRESS;
+  addr.u8[0] = c->head;
+  PRINTF("CLUSTERS: Sending Command SET LOCAL GW to cluster head %d.0 where target is %d.0\n", addr.u8[0], command.target_id);
+  mesh_send(&mesh, &addr);
 }
 
 static void handle_clusters() {
