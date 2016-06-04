@@ -90,16 +90,15 @@ static void handleCommand(CmdMsg *command) {
 static void broadcast_CmdMsg(int command_id, int target) {
   PRINTF("COMMAND: Broadcasting command %d\n", command_id);
   resetCmdMsg(&command);
-  setCmdMsgId(&command, 31);
   command.cmd = command_id;
   command.target_id = target;
+  encodeCmdMsg(&command, command_buffer);
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;
-  encodeCmdMsg(&command, command_buffer);
-  packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
   int i;
   for (i = 0; i < NUMBER_OF_COWS; i++) {
+    packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
     addr.u8[0] = register_cows[i];
     PRINTF("COMMAND Sending to %d.0\n", addr.u8[0]);
     mesh_send(&mesh, &addr);
@@ -254,7 +253,6 @@ static void printCluster(struct Cluster *c) {
 static void sendClusteringCommand(struct Cluster *c){
   // sends clustering command to cluster head and cluster members
   resetCmdMsg(&command);
-  setCmdMsgId(&command, 29);
   command.cmd = CMD_SET_LOCAL_GW;
   command.target_id = c->head;
   encodeCmdMsg(&command, command_buffer);
