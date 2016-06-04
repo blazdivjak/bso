@@ -76,7 +76,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
 
   } 
 
-  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_ACC){
+  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_ACC) {
   	EmergencyMsg eMsg;
   	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
 
@@ -178,6 +178,8 @@ void cancelSysEmergencyTwo() {
 	neighbor_sense_time =  NEIGHBOR_SENSE_TIME;
 	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 
+	PRINTF("EMERGENCY cancel sys #2\n");
+
 	if(status.emergencyTwo==2){
 		//TODO: Send data
 		sendEmergencyTwoRSSI();
@@ -218,7 +220,8 @@ static void triggerEmergencyTwo() {
 	status.emergencyTwo = 1;
 	PRINTF("EMERGENCY: Emergency Two triggered\n");
 
-	setCmdMsgId(&command, 32);
+	// setCmdMsgId(&command, 32);
+	resetCmdMsg(&command);
 	command.cmd = CMD_EMERGENCY_TWO;
 	command.target_id = m.mote_id;
 	sendCommand();	
@@ -244,6 +247,7 @@ static void cancelEmergencyTwo() {
 	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
 	command.target_id = m.mote_id;
 	sendCommand();
+	sendEmergencyTwoAcc();
 	
 	neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
 	movement_read_interval = MOVEMENT_READ_INTERVAL;
@@ -317,7 +321,7 @@ void sendEmergencyTwoRSSI() {
    
 	linkaddr_t addr_send;     
 	uint8_t size = encodeEmergencyMsg(&eTwoRSSI, emergencyBuffer);  
-	PRINTF("EMERGENCY: Number Two. Sending RSSI to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
+	PRINTF("EMERGENCY #2. Sending RSSI to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
 	packetbuf_copyfrom(emergencyBuffer, size);       
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;  
@@ -329,8 +333,8 @@ void sendEmergencyTwoAcc() {
     
 	linkaddr_t addr_send;     
 	uint8_t size = encodeEmergencyMsg(&eTwoAcc, emergencyBuffer);  
-	PRINTF("EMERGENCY TWO RSSI: Sending to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
-	packetbuf_copyfrom(emergencyBuffer, size);       
+	PRINTF("EMERGENCY #2. Sending Accelerations to my current gateway ID: %d.0, %d bytes\n", currentGateway, size);
+	packetbuf_copyfrom(emergencyBuffer, size);
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;  
 	mesh_send(&mesh, &addr_send);
@@ -420,7 +424,9 @@ void readMovement(){
 	}
 	movement_counter++;
 	if (status.emergencyTwo == 1) {
-		if (addEmergencyData(&eTwoAcc, (uint8_t) (acc/10000)) == EMERGENCY_DATA_MAX-1) {
+		if (addEmergencyData(&eTwoAcc, (uint8_t) (acc/10000)) == EMERGENCY_DATA_MAX) {
+		// if (addEmergencyData(&eTwoAcc, (uint8_t) (acc/10000)) == 100) {
+			PRINTF("EMERGENCY #2 Accelerations full\n");
 			sendEmergencyTwoAcc();
 		}
 	}
@@ -480,11 +486,11 @@ PROCESS_THREAD(krava, ev, data)
 
 		PROCESS_WAIT_EVENT();
 		
-		if(etimer_expired(&movementReadInterval)){			
+		if(etimer_expired(&movementReadInterval)) {		
 			readMovement();
 			etimer_set(&movementReadInterval, movement_read_interval);			
 		}		
-		if(etimer_expired(&temperatureReadInterval)){									
+		if(etimer_expired(&temperatureReadInterval)) {
 			readTemperature();
 			readBattery();			
 			etimer_set(&temperatureReadInterval, temp_read_intreval);					

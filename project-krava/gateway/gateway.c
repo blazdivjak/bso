@@ -95,11 +95,12 @@ static void broadcast_CmdMsg(int command_id, int target) {
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;
+  encodeCmdMsg(&command, command_buffer);
+  packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
   int i;
   for (i = 0; i < NUMBER_OF_COWS; i++) {
     addr.u8[0] = register_cows[i];
-    encodeCmdMsg(&command, command_buffer);
-    packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
+    PRINTF("COMMAND Sending to %d.0\n", addr.u8[0]);
     mesh_send(&mesh, &addr);
   }
 }
@@ -129,7 +130,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     //ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
   }
   // Krava message
-  else if((((uint8_t *)packetbuf_dataptr())[0] & 0x01) == 0){
+  else if ((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_MESSAGE) {
     // TODO: if sent to me? and the message format is right ...
 
     // read packet RSSI value
@@ -168,7 +169,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     }
   }
   // Command
-  else{    
+  else if ((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_CMD) { 
     CmdMsg command;
     decodeCmdMsg(packetbuf_dataptr(), &command);
 
@@ -176,7 +177,18 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     mesh_send(&mesh, from); // send ACK
 
     handleCommand(&command);
-  }  
+  } 
+  // Emergency message
+  else {
+    PRINTF("EMERGENCY ");
+    EmergencyMsg eMsg;
+    decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
+
+    packetbuf_copyfrom(&eMsg.id, 1);
+    mesh_send(&mesh, from); // send ACK
+
+    printEmergencyMsg(&eMsg);
+  }
 }
 
 /* Address function */
