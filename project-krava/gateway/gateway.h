@@ -67,9 +67,9 @@ struct Cluster{
 #define CLUSTER_FORMULA_WEIGHT_NUM_MOTION 1 // values from 0 to 2 * WEIGHT
 #define CLUSTER_FORMULA_WEIGHT_NUM_HOPS 1 // values from 0 to n * WEIGHT
 #define CLUSTER_FORMULA_WEIGHT_NUM_BATTERY 1 // valuse from 1 to 5 * WEIGHT
-static uint8_t cluster_counts[NUMBER_OF_COWS];  // number of cows in cluster
-static uint32_t clusters[NUMBER_OF_COWS];  // cluster ids
 static int cluster_scores[NUMBER_OF_COWS];  // scores for each cluster candidate
+static uint8_t clusters_count; // number of clusters in network
+static struct Cluster clusters[NUMBER_OF_COWS];  // cluster objects
 
 // mesh
 static struct mesh_conn mesh;
