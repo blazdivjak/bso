@@ -42,19 +42,16 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   }
   //Krava message
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_MESSAGE){
-  	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &mNew);
-  	printMessage(&mNew);
+  	Message fMsg;
+  	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &fMsg);
+  	printMessage(&fMsg);
 
-  	//Send ACK for packet
-  	packetbuf_copyfrom(&mNew.id, 1);
+  	//Send ACK for packet  	
+  	packetbuf_copyfrom(&fMsg.id, 1);
     mesh_send(&mesh, from); // send ACK
-
-  	//Sent packet forward if I am gateway
-  	if(status.iAmGateway){
-		PRINTF("MESSAGES: Forwarding message from :%d.%d to current gateway: %d.0\n", from->u8[0], from->u8[1], currentGateway);
-		packetbuf_copyfrom(packetbuf_dataptr(), packetbuf_datalen());
-    	mesh_send(&mesh, from); // send message from other krava to gateway
-  	}
+  	
+  	//Forward message
+	forwardMessage(fMsg);
 
   }
   //Gateway command
@@ -67,7 +64,10 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
 
     handleCommand(&command);
   }   
-
+  /*
+  IF I am local gateway I can also receive RSSI mesurements from cows in my cluster  and
+  I need to forward them to default gateway
+  */
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_RSSI){
   	EmergencyMsg eMsg;
   	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
@@ -77,8 +77,15 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
 
   	printEmergencyMsg(&eMsg);
 
+  	//Forward emergency
+  	forwardEmergency(eMsg);
+
   } 
 
+  /*
+  IF I am local gateway I can also receive ACCELEROMETER from cows in my cluster and I need
+  to forward them to default gateway
+  */
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_E_TWO_ACC) {
   	EmergencyMsg eMsg;
   	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
@@ -87,6 +94,9 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     mesh_send(&mesh, from); // send ACK
 
   	printEmergencyMsg(&eMsg);
+
+  	//Forward emergency
+  	forwardEmergency(eMsg);
 
   }
 }
@@ -160,7 +170,7 @@ void handleEmergencyTwo(uint8_t target) {
 		PRINTF("EMERGENCY: Starting running krava monitoring.\n");
 
 		//Configure broadcast listening timer and sense more offten
-		neighbor_sense_time = (CLOCK_SECOND);		
+		neighbor_sense_interval = NEIGHBOR_SENSE_INTERVAL/2;		
 		status.emergencyTwo = 2;
 		status.emergencyTarget = target;
 	}	
@@ -168,7 +178,7 @@ void handleEmergencyTwo(uint8_t target) {
 
 void cancelSysEmergencyOne() {
 
-	neighbor_sense_time =  NEIGHBOR_SENSE_TIME;
+	neighbor_sense_interval =  NEIGHBOR_SENSE_TIME;
 	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 	
 	if(status.emergencyOne != 0) {
@@ -183,7 +193,7 @@ void cancelSysEmergencyOne() {
 
 void cancelSysEmergencyTwo() {
 
-	neighbor_sense_time =  NEIGHBOR_SENSE_TIME;
+	neighbor_sense_interval =  NEIGHBOR_SENSE_INTERVAL;
 	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 
 	PRINTF("EMERGENCY cancel sys #2\n");
@@ -234,8 +244,8 @@ static void triggerEmergencyTwo() {
 	sendCommand();	
 
 	//Advertise offten and mesure movement more offten	
-	neighbor_advertisment_interval = (CLOCK_SECOND)/2;
-	movement_read_interval = (CLOCK_SECOND)/4;
+	neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL/2;
+	movement_read_interval = MOVEMENT_READ_INTERVAL/2;
 
 }
 
@@ -276,6 +286,9 @@ void setPower(uint8_t powerLevel) {
 */
 static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2) {  
   m.mote_id = myAddress_1;
+  eTwoRSSI.mote_id = myAddress_1;
+  eTwoAcc.mote_id = myAddress_1;
+
   linkaddr_t addr;
   addr.u8[0] = myAddress_1;
   addr.u8[1] = myAddress_2;  
@@ -302,6 +315,28 @@ void sendCommand() {
 	addr_send.u8[1] = 0;  
 	mesh_send(&mesh, &addr_send);
 	resetCmdMsg(&command);
+}
+
+void forwardEmergency(EmergencyMsg eMsg) {
+					
+	linkaddr_t addr_send;
+	uint8_t size = encodeEmergencyMsg(&eMsg, emergency_forward_buffer);
+	PRINTF("MESSAGES: Forwarding EMERGENCY to current gateway: %d.0\n", currentGateway);
+	packetbuf_copyfrom(emergency_forward_buffer, size);       
+	addr_send.u8[0] = currentGateway;
+	addr_send.u8[1] = 0;
+	mesh_send(&mesh, &addr_send);	
+}
+
+void forwardMessage(Message fMsg) {
+					
+	linkaddr_t addr_send;
+	uint8_t size = encodeData(&fMsg, message_forward_buffer);
+	PRINTF("MESSAGES: Forwarding message to current gateway: %d.0\n", currentGateway);
+	packetbuf_copyfrom(message_forward_buffer, size);       
+	addr_send.u8[0] = currentGateway;
+	addr_send.u8[1] = 0;
+	mesh_send(&mesh, &addr_send);	
 }
 
 void sendMessage() {
@@ -464,7 +499,7 @@ PROCESS_THREAD(krava, ev, data)
 	PRINTF("Sensor sensing process\n");
 	status.iAmGateway = 0;
 	status.emergencyOne = 0;
-	status.emergencyTwo = 0;
+	status.emergencyTwo = 0;	 
 	resetMessage(&m);
 	resetMessage(&mNew);
 	resetPackets(&myPackets);

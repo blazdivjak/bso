@@ -24,7 +24,7 @@
 #define RSSI_READ_INTERVAL (CLOCK_SECOND)*5
 #define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*360
 #define TEMP_READ_INTERVAL (CLOCK_SECOND)*30
-#define BATTERY_READ_INTERVAL (CLOCK_SECOND)*30
+//#define BATTERY_READ_INTERVAL (CLOCK_SECOND)*30 the same as temperature read interval
 #define SEND_INTERVAL (CLOCK_SECOND)*30
 #define ACK_COUNT_INTERVAL (CLOCK_SECOND)*120
 
@@ -33,7 +33,7 @@ static unsigned long send_interval = SEND_INTERVAL/2;
 static unsigned long movement_read_interval = MOVEMENT_READ_INTERVAL;
 static unsigned long rssi_read_interval = RSSI_READ_INTERVAL;
 static unsigned long temp_read_intreval = TEMP_READ_INTERVAL;
-static unsigned long battery_read_interval = BATTERY_READ_INTERVAL;
+//static unsigned long battery_read_interval = BATTERY_READ_INTERVAL;
 static unsigned long ack_count_interval = ACK_COUNT_INTERVAL;
 
 //Timers
@@ -68,8 +68,8 @@ static uint8_t sendFailedCounter = 0;
 
 //Neighbors and definitions
 #define NEIGHBOR_TABLE_REINITIALIZE_INTERVAL (CLOCK_SECOND)*360
-#define NEIGHBOR_SENSE_INTERVAL (CLOCK_SECOND)*5
-#define NEIGHBOR_SENSE_TIME (CLOCK_SECOND)/2
+#define NEIGHBOR_SENSE_INTERVAL (CLOCK_SECOND)*5 //5
+#define NEIGHBOR_SENSE_TIME (CLOCK_SECOND)/4
 #define NEIGHBOR_ADVERTISEMENT_INTERVAL (CLOCK_SECOND)*5
 #define RSSI_TRESHOLD -75
 
@@ -78,13 +78,12 @@ static unsigned long neighbor_sense_interval = NEIGHBOR_SENSE_INTERVAL;
 static unsigned long  neighbor_sense_time = NEIGHBOR_SENSE_TIME;
 static unsigned long  neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
 
-static uint8_t kravaNeighbors[20];
-static uint8_t numberOfNeighbors = 0;
-
 //message buffer
 static uint8_t send_buffer[MESSAGE_BYTE_SIZE_MAX];
+static uint8_t message_forward_buffer[MESSAGE_BYTE_SIZE_MAX];
 static uint8_t command_buffer[CMD_BUFFER_MAX_SIZE];
 static uint8_t emergencyBuffer[EMERGENCY_DATA_MAX+4];
+static uint8_t emergency_forward_buffer[EMERGENCY_DATA_MAX+4];
 static int rssiTreshold = RSSI_TRESHOLD;
 
 Message m; //message we save to
@@ -147,6 +146,8 @@ void setPower(uint8_t powerLevel);
 static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2);
 static void setCurrentGateway(uint8_t currentGatewayAddress);
 void sendCommand();
+void forwardEmergency(EmergencyMsg eMsg);
+void forwardMessage(Message fMsg);
 void sendMessage();
 void sendEmergencyTwoRSSI();
 void sendEmergencyTwoAcc();
