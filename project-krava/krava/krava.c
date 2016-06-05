@@ -164,6 +164,10 @@ void clusterLearningMode(){
 	PRINTF("CLUSTERS: Setting my current gateway to: %d.0.\n", defaultGateway);
 	currentGateway = defaultGateway;
 
+	//Flushing neighbors
+	PRINTF("CLUSTERS: Flushing neighbor table\n");
+	m.neighbourCount = 0;
+
 }
 
 /*
@@ -595,8 +599,7 @@ PROCESS_THREAD(communication, ev, data)
 			etimer_reset(&ackCountInterval);
 		}		
 		if(etimer_expired(&meshRefreshInterval)){
-			PRINTF("NETWORK: Routing table flush\n");			
-			m.neighbourCount = 0;
+			PRINTF("NETWORK: Routing table flush\n");						
 			route_flush_all();			
 			etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 		}
@@ -616,8 +619,7 @@ PROCESS_THREAD(neighbors, ev, data)
 
 	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval*60*5);
 	etimer_set(&neighborSenseInterval, neighbor_sense_interval*60*5);
-	etimer_set(&neighborSenseTime, neighbor_sense_time);
-	etimer_set(&neighborTableRinitializeInterval, neighbor_table_reinitialize_interval);
+	etimer_set(&neighborSenseTime, neighbor_sense_time);	
 	uint8_t sensing = 0;	
 	//Process main loop
 

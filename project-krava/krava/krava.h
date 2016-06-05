@@ -73,7 +73,6 @@ static uint8_t sendFailedCounter = 0;
 #define NEIGHBOR_ADVERTISEMENT_INTERVAL (CLOCK_SECOND)*5
 #define RSSI_TRESHOLD -75
 
-static unsigned long neighbor_table_reinitialize_interval = NEIGHBOR_TABLE_REINITIALIZE_INTERVAL;
 static unsigned long neighbor_sense_interval = NEIGHBOR_SENSE_INTERVAL;
 static unsigned long  neighbor_sense_time = NEIGHBOR_SENSE_TIME;
 static unsigned long  neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
