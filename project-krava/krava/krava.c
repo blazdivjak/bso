@@ -122,7 +122,11 @@ void handleCommand(CmdMsg *command) {
     	//Disable neigbor advertisments and sensing for clsuter duration
     	neighbor_advertisment_interval = CLUSTER_INTERVAL;
     	neighbor_sense_interval = CLUSTER_INTERVAL;
-    }      
+    }
+
+	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
+	etimer_set(&neighborSenseInterval, neighbor_sense_interval);
+
   } else if (command->cmd == CMD_QUERY_MOTE) {
     PRINTF("COMMAND: Query from gateway: %d\n", command->target_id);
     sendMessage();
@@ -168,6 +172,8 @@ void clusterLearningMode(){
 	PRINTF("CLUSTERS: Flushing neighbor table\n");
 	m.neighbourCount = 0;
 
+	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
+	etimer_set(&neighborSenseInterval, neighbor_sense_interval);	
 }
 
 /*
