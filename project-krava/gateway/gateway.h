@@ -20,15 +20,18 @@
 #include "../lib/libmessage.h"
 #include "random.h"
 #include "ringbuf.h"
+#include "lib/list.h"
+#include "lib/memb.h"
 #include <setjmp.h>  // exceptions
 
 // timers
-#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*60*10
+#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*60*30
 #define COW_MISSING_INTERVAL (CLOCK_SECOND)*10 // interval in which alarm is raised after the cow went missing
 #define COWS_SEEN_COUNTER_INTERVAL (CLOCK_SECOND)*60 // interval in which every cow should be able to deliver at least one message
 #define CLUSTERS_REFRESH_INTERVAL (CLOCK_SECOND)*60*6
 #define CLUSTERS_RETRY_INTERVAL (CLOCK_SECOND)*60*1
 #define COMMAND_SEND_INTERVAL (CLOCK_SECOND)*1
+#define ERROR_RECOVERY_INTERVAL CLOCK_SECOND * 2
 
 // uart and commands
 #define UART0_CONF_WITH_INPUT 1
@@ -95,6 +98,7 @@ static struct etimer meshRefreshInterval;
 static struct etimer clusters_refresh_interval;
 static struct etimer cows_seen_counter_refresh_interval;
 static struct etimer commander_interval;
+static struct etimer error_recovery_interval;
 
 static struct ringbuf commanderBuff;
 #define COMMANDER_BUFF_SIZE 64
@@ -133,6 +137,21 @@ static void handle_reset_mesh();
 static void handle_clusters();
 static void handle_missing_cows();
 static void handle_cows_seen_refresh();
+
+
+/* Error detection and recovery */
+#define NUM_ACK_ENTRIES 64
+#define NUM_OF_RETRIES 6
+struct ack_entry {
+  struct ack_entry *next;
+  uint8_t to;
+  uint8_t buffer[CMD_BUFFER_MAX_SIZE];
+  uint8_t retries;
+};
+LIST(ack_list);
+MEMB(ack_mem, struct ack_entry, NUM_ACK_ENTRIES);
+
+void findRemoveFromAckList(uint8_t id, uint8_t mote_id);
 
 
 

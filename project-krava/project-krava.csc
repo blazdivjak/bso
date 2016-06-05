@@ -8,7 +8,6 @@
   <project EXPORT="discard">[APPS_DIR]/powertracker</project>
   <simulation>
     <title>krava</title>
-    <speedlimit>1.0</speedlimit>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -65,8 +64,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>16.853955223654953</x>
-        <y>38.76803113685338</y>
+        <x>58.918959718978684</x>
+        <y>23.47166586582657</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -101,8 +100,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>13.31262452115551</x>
-        <y>40.93393945727269</y>
+        <x>65.1768630182308</x>
+        <y>23.725528527367526</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -193,7 +192,7 @@
       <viewport>4.184000503781367 0.0 0.0 4.184000503781367 47.8308424081328 -40.20098821177572</viewport>
     </plugin_config>
     <width>400</width>
-    <z>1</z>
+    <z>2</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -201,15 +200,15 @@
   <plugin>
     org.contikios.cooja.plugins.LogListener
     <plugin_config>
-      <filter>ID:4</filter>
+      <filter>ID:4 ACK</filter>
       <formatted_time />
       <coloring />
     </plugin_config>
     <width>889</width>
-    <z>2</z>
+    <z>1</z>
     <height>613</height>
-    <location_x>400</location_x>
-    <location_y>160</location_y>
+    <location_x>636</location_x>
+    <location_y>174</location_y>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.TimeLine
@@ -226,7 +225,7 @@
       <zoomfactor>500.0</zoomfactor>
     </plugin_config>
     <width>1920</width>
-    <z>5</z>
+    <z>6</z>
     <height>166</height>
     <location_x>0</location_x>
     <location_y>934</location_y>
@@ -238,7 +237,7 @@
       <decorations>true</decorations>
     </plugin_config>
     <width>606</width>
-    <z>4</z>
+    <z>5</z>
     <height>160</height>
     <location_x>680</location_x>
     <location_y>0</location_y>
@@ -251,10 +250,18 @@
       <scrollpos>0,0</scrollpos>
     </plugin_config>
     <width>633</width>
-    <z>3</z>
+    <z>4</z>
     <height>417</height>
     <location_x>4</location_x>
     <location_y>398</location_y>
+  </plugin>
+  <plugin>
+    PowerTracker
+    <width>400</width>
+    <z>3</z>
+    <height>400</height>
+    <location_x>1289</location_x>
+    <location_y>2</location_y>
   </plugin>
 </simconf>
 

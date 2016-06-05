@@ -101,6 +101,16 @@ static void broadcast_CmdMsg(uint8_t command_id, uint8_t target, uint8_t destina
   sent_cmd_addr.u8[1] = 0;
   PRINTF("COMMAND Sending to %d.0\n", sent_cmd_addr.u8[0]);
   mesh_send(&mesh, &sent_cmd_addr);
+
+  struct ack_entry *ack = memb_alloc(&ack_mem);
+  if (ack != NULL) {
+    ack->next = NULL;
+    ack->to = destinationAddress;
+    ack->retries=0;
+    memcpy(ack->buffer, command_buffer, CMD_BUFFER_MAX_SIZE);
+    list_push(ack_list, ack);
+    PRINTF("ACK LIST: adding id %d mote id %d. list size: %d\n", command.id, destinationAddress, list_length(ack_list));
+  }
 }
 
 static int readRSSI() {
@@ -124,8 +134,8 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
 
   // ACK
   if(packetbuf_datalen()==1){
-    PRINTF("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
-    //ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
+    PRINTF("MESSAGES: Message ID: %d ACK received from %d.\n", ((uint8_t *)packetbuf_dataptr())[0], from->u8[0]);
+    findRemoveFromAckList(((uint8_t *)packetbuf_dataptr())[0], from->u8[0]);
   }
   // Krava message
   else if ((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_MESSAGE) {
@@ -455,10 +465,34 @@ static void handle_cows_seen_refresh() {
     byte_to_binary(cows_seen_counter_status ^ cows_registered));
 }
 
+void findRemoveFromAckList(uint8_t id, uint8_t mote_id) {
+  struct ack_entry *e = NULL;
+  PRINTF("ACK LIST: Searching... List size: %d\n", list_length(ack_list));
+
+  for(e = list_head(ack_list); e != NULL; e = list_item_next(e)) {
+    PRINTF("ACK LIST: Id=%d, Mote ID=%d\n", e->buffer[0], e->to);
+    if(id == e->buffer[0] && mote_id == e->to) {
+      break;
+    }
+  }
+
+  if (e == NULL) {
+    PRINTF("ACK LIST: Didnt find ack id %d from %d.0. List size: %d\n", id, mote_id, list_length(ack_list));
+    return;
+  } 
+
+  list_remove(ack_list, e);
+  memb_free(&ack_mem, e);
+  PRINTF("ACK LIST: Found and removed ack id %d from %d.0. List size: %d\n", id, mote_id, list_length(ack_list));
+
+  return;
+}
+
 /* Init process */
 PROCESS(gateway_main, "Main gateway proces");
 PROCESS(commander, "Commander proces");
-AUTOSTART_PROCESSES(&gateway_main, &commander);
+PROCESS(error_recovery, "Error recovery process");
+AUTOSTART_PROCESSES(&gateway_main, &commander, &error_recovery);
 
 PROCESS_THREAD(gateway_main, ev, data)
 {  
@@ -606,5 +640,54 @@ PROCESS_THREAD(commander, ev, data)
       }
     }                     
   }
+  PROCESS_END();
+}
+
+PROCESS_THREAD(error_recovery, ev, data) {
+  //Our process 
+  PROCESS_BEGIN();
+  PRINTF("Error recovery process\n");
+
+  list_init(ack_list);
+  memb_init(&ack_mem);
+
+  etimer_set(&error_recovery_interval, ERROR_RECOVERY_INTERVAL);
+  static volatile struct ack_entry *entry;
+
+  while(1) {
+    PROCESS_WAIT_EVENT();
+    if(etimer_expired(&error_recovery_interval)){
+
+      if (list_length(ack_list) > 1) {
+        etimer_set(&error_recovery_interval, (CLOCK_SECOND)/4);
+
+        for(entry = list_head(ack_list);
+          entry != NULL;
+          entry = list_item_next(entry)) {
+          PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&error_recovery_interval));  
+
+          entry->retries++;
+          linkaddr_t retry_addr;
+          retry_addr.u8[0] = entry->to;
+          retry_addr.u8[1] = 0;
+
+          packetbuf_copyfrom(entry->buffer, CMD_BUFFER_MAX_SIZE);
+          mesh_send(&mesh, &retry_addr);
+          PRINTF("ACK ERROR: Retry sending msg ID %d to %d.0\n", entry->buffer[0], entry->to);
+          if (entry->retries >= NUM_OF_RETRIES) {
+            PRINTF("ACK ERROR: Max num of retries for msg ID %d to %d.0. Removing it..\n", entry->buffer[0], entry->to);
+            findRemoveFromAckList(entry->buffer[0], entry->to);
+          }
+          etimer_reset(&error_recovery_interval);
+        }
+
+        etimer_set(&error_recovery_interval, ERROR_RECOVERY_INTERVAL);
+
+      } else {
+        etimer_reset(&error_recovery_interval);
+      }
+    }
+  }
+
   PROCESS_END();
 }

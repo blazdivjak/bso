@@ -46,7 +46,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   	packetbuf_copyfrom(packetbuf_dataptr(), 1);
     mesh_send(&mesh, from); // send ACK
 
-    #ifdef DEBUG
+    #if DEBUG
     Message fMsg;
   	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &fMsg);
   	printMessage(&fMsg);
@@ -58,11 +58,12 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   }
   //Gateway command
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_CMD){
+  	//Send ACK for packet  	
+  	packetbuf_copyfrom(packetbuf_dataptr(), 1);
+    mesh_send(&mesh, from); // send ACK
+
   	CmdMsg command;
     decodeCmdMsg(packetbuf_dataptr(), &command);
-
-    packetbuf_copyfrom(&command.id, 1);
-    mesh_send(&mesh, from); // send ACK
 
     handleCommand(&command);
   }   
@@ -75,7 +76,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   	packetbuf_copyfrom(packetbuf_dataptr(), 1);
     mesh_send(&mesh, from); // send ACK
 
-    #ifdef DEBUG
+    #if DEBUG
     EmergencyMsg eMsg;
 	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
   	printEmergencyMsg(&eMsg);
