@@ -32,6 +32,7 @@
 // uart and commands
 #define UART0_CONF_WITH_INPUT 1
 #define CMD_NUMBER_OF_MOTES "NOM"
+#define CMD_QUERY "QRY"	// send with >>QRY 7<< to query mote id 7
 
 // addressing
 #define GATEWAY_ADDRESS 0
