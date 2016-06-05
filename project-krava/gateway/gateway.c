@@ -289,10 +289,10 @@ static void handle_clusters() {
     int s_motion = get_average_motion(motions[i], num_of_motions[i]) * -CLUSTER_FORMULA_WEIGHT_NUM_MOTION; 
     int s_myhops = myhops[i] * -CLUSTER_FORMULA_WEIGHT_NUM_HOPS;
     int s_batter = ((batterys[i] / 10) / 2) * CLUSTER_FORMULA_WEIGHT_NUM_BATTERY; // numers from 0 to 5 * WEIGHT
-    // TODO: score += RSSI
-    int score = 0 + s_neighb + s_motion + s_myhops + s_batter;
-    //printf("CLUSTERS: i: %d N: %d + M: %d + H: %d + B: %d = %d\n", 
-    //  i, s_neighb, s_motion, s_myhops, s_batter, score);
+    int s_rssi   = 0;
+    int score = 0 + s_neighb + s_motion + s_myhops + s_batter + s_rssi;
+    //printf("CLUSTERS: i: %d N: %d + M: %d + H: %d + B: %d + R: %d = %d\n", 
+    //  i, s_neighb, s_motion, s_myhops, s_batter, s_rssi, score);
     cluster_scores[i] = score;
     printf("%d:%d  ", register_cows[i], cluster_scores[i]);
   }
@@ -310,6 +310,8 @@ static void handle_clusters() {
   }
   PRINTF("CLUSTERS: found %d potential clusters\n", cluster_candidates_count);
   if (cluster_candidates_count == 0) {
+    // schedule next cluster refresh sooner
+    etimer_set(&clusters_refresh_interval, CLUSTERS_RETRY_INTERVAL);
     return;
   }
   PRINTF("CLUSTERS: Potencial clusters are: ");
@@ -358,6 +360,8 @@ static void handle_clusters() {
   }
   PRINTF("CLUSTERS: %d clusters are forwarded to filtering\n", cluster_candidates_count_2);
   if (cluster_candidates_count_2 == 0) {
+    // schedule next cluster refresh sooner
+    etimer_set(&clusters_refresh_interval, CLUSTERS_RETRY_INTERVAL);
     return;
   }
   // filter out clusters with zero members
@@ -372,6 +376,8 @@ static void handle_clusters() {
   }
   printf("CLUSTERS: %d clusters generated\n", clusters_count);
   if (clusters_count == 0) {
+    // schedule next cluster refresh sooner
+    etimer_set(&clusters_refresh_interval, CLUSTERS_RETRY_INTERVAL);
     return;
   }
   for (i=0; i < clusters_count; i++) {
@@ -479,8 +485,8 @@ PROCESS_THREAD(gateway_main, ev, data)
     }
 
     if(etimer_expired(&clusters_refresh_interval)){
+      etimer_set(&clusters_refresh_interval, CLUSTERS_REFRESH_INTERVAL);
       handle_clusters();
-      etimer_reset(&clusters_refresh_interval);
     }
 
     if(etimer_expired(&cows_seen_counter_refresh_interval)){
@@ -548,7 +554,7 @@ PROCESS_THREAD(commander, ev, data)
     PROCESS_WAIT_EVENT();
     
     if(etimer_expired(&commander_interval)){
-      PRINTF("COMMAND: Checking for pending commands. Number: %d\n", ringbuf_elements(&commanderBuff));
+      //PRINTF("COMMAND: Checking for pending commands. Number: %d\n", ringbuf_elements(&commanderBuff));
       if(ringbuf_elements(&commanderBuff)>1){    
         currentCommand=ringbuf_get(&commanderBuff);
         currentTarget=ringbuf_get(&commanderBuff);
