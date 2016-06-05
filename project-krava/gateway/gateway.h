@@ -44,8 +44,8 @@ static uint8_t sendFailedCounter = 0;
 
 // cows registered and present in network
 #define MAX_NUMBER_OF_COWS 32
-#define NUMBER_OF_COWS 20
-static int register_cows[NUMBER_OF_COWS] = {1, 2, 3, 5, 6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21}; // register cow addresses
+#define NUMBER_OF_COWS 5
+static int register_cows[NUMBER_OF_COWS] = {1, 2, 3, 5, 6}; // register cow addresses
 static uint32_t cows_registered = 0; // bitmap for registered cows
 static uint32_t cows_missing = 0; // bitmap for missing cows
 static uint8_t cows_seen_counter[NUMBER_OF_COWS]; // count how many times the cow is seen in network - if zero raise alarm
@@ -96,7 +96,7 @@ static struct etimer cows_seen_counter_refresh_interval;
 static struct etimer commander_interval;
 
 static struct ringbuf commanderBuff;
-#define COMMANDER_BUFF_SIZE 8
+#define COMMANDER_BUFF_SIZE 64
 static uint8_t commanderBuff_data[COMMANDER_BUFF_SIZE];
 
 // status of nodes in network

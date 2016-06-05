@@ -250,9 +250,19 @@ static void printCluster(struct Cluster *c) {
 
 static void sendClusteringCommand(struct Cluster *c){
   // sends clustering command to cluster head and cluster members
-  resetCmdMsg(&command);
-  command.cmd = CMD_SET_LOCAL_GW;
-  command.target_id = c->head;
+
+
+  if ((COMMANDER_BUFF_SIZE - ringbuf_elements(&commanderBuff)) > (3 + c->members_count)) {
+    ringbuf_put(&commanderBuff, CMD_SET_LOCAL_GW);  // cmd 
+    ringbuf_put(&commanderBuff, c->head); //target
+    ringbuf_put(&commanderBuff, c->members_count);
+    int i;
+    for (i = 0; i < c->members_count; i++) {
+      ringbuf_put(&commanderBuff, c->members[i]);
+    }
+  }
+
+/*
   
   // send command to cluster members
   linkaddr_t addr;
@@ -274,6 +284,7 @@ static void sendClusteringCommand(struct Cluster *c){
   encodeCmdMsg(&command, command_buffer);
   packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
   mesh_send(&mesh, &addr);
+  */
 }
 
 static void handle_clusters() {
@@ -504,17 +515,21 @@ PROCESS_THREAD(gateway_main, ev, data)
       } else if (!memcmp(CMD_QUERY, data, 3)) {
           uint8_t qId = atoi(&data[3]);
           PRINTF("QUERY COMMAND: Mote ID = %d\n", qId);
-          CmdMsg cmd;
-          resetCmdMsg(&cmd);
-          cmd.cmd = CMD_QUERY_MOTE;
-          cmd.target_id = qId;
-          encodeCmdMsg(&cmd, command_buffer);
-          linkaddr_t addr;
-          addr.u8[0] = qId;
-          addr.u8[1] = myAddress_2;
-          packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
-          PRINTF("COMMAND Sending to %d.0\n", addr.u8[0]);
-          mesh_send(&mesh, &addr);
+          PRINTF("COMMAND: Adding command %d taget: %d to buffer.\n", CMD_CANCEL_EMERGENCY_ONE, qId);
+          ringbuf_put(&commanderBuff, CMD_QUERY_MOTE);  // cmd 
+          ringbuf_put(&commanderBuff, qId); //target
+
+          // CmdMsg cmd;
+          // resetCmdMsg(&cmd);
+          // cmd.cmd = CMD_QUERY_MOTE;
+          // cmd.target_id = qId;
+          // encodeCmdMsg(&cmd, command_buffer);
+          // linkaddr_t addr;
+          // addr.u8[0] = qId;
+          // addr.u8[1] = myAddress_2;
+          // packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
+          // PRINTF("COMMAND Sending to %d.0\n", addr.u8[0]);
+          // mesh_send(&mesh, &addr);
       }
     }
 
@@ -534,6 +549,7 @@ PROCESS_THREAD(commander, ev, data)
   static volatile uint8_t currentCommand;
   static volatile uint8_t currentTarget;  
   static volatile int i;
+  static volatile uint8_t members_count;
 
   PROCESS_WAIT_EVENT();
   ringbuf_init(&commanderBuff, commanderBuff_data, sizeof(commanderBuff_data));
@@ -550,12 +566,30 @@ PROCESS_THREAD(commander, ev, data)
         currentCommand=ringbuf_get(&commanderBuff);
         currentTarget=ringbuf_get(&commanderBuff);
         PRINTF("COMMAND: Initializing sending command: %d target: %d\n", currentCommand, currentTarget);
-        etimer_set(&commander_interval, (CLOCK_SECOND)/5);
         
-        for(i=0;i<NUMBER_OF_COWS;i++){
-          PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&commander_interval));          
-          broadcast_CmdMsg(currentCommand, currentTarget, register_cows[i]);
-          etimer_reset(&commander_interval);
+        if (currentCommand == CMD_QUERY_MOTE) {
+          broadcast_CmdMsg(currentCommand, currentTarget, currentTarget);
+
+        } else if (currentCommand == CMD_SET_LOCAL_GW) {
+          members_count = ringbuf_get(&commanderBuff);
+          PRINTF("CLUSTERS COMMAND: Local Gw is %d.0, cluter members count: %d\n", currentTarget, members_count);
+          broadcast_CmdMsg(currentCommand, currentTarget, currentTarget);
+
+          etimer_set(&commander_interval, (CLOCK_SECOND)/5);
+          for(i=0;i<members_count;i++){
+            PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&commander_interval));          
+            broadcast_CmdMsg(currentCommand, currentTarget, ringbuf_get(&commanderBuff));
+            etimer_reset(&commander_interval);
+          }
+
+        } else {  //broadcast to all
+          etimer_set(&commander_interval, (CLOCK_SECOND)/5);
+        
+          for(i=0;i<NUMBER_OF_COWS;i++){
+            PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&commander_interval));          
+            broadcast_CmdMsg(currentCommand, currentTarget, register_cows[i]);
+            etimer_reset(&commander_interval);
+          }
         }
         etimer_set(&commander_interval, COMMAND_SEND_INTERVAL);      
       }else{
