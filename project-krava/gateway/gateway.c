@@ -129,14 +129,6 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   }
   // Krava message
   else if ((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_MESSAGE) {
-    // TODO: if sent to me? and the message format is right ...
-
-    // read packet RSSI value
-    //if (hops <= 1) {
-    //  // This packet is from neighbouring krava, read and save the RSSI value
-    //  int rssi; 
-    //  rssi = readRSSI();
-    //}
 
     // message decode
     Message m;
@@ -147,7 +139,6 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
 
     // find cows index in data structures
     int cow_index = find_cow_with_id(m.mote_id);
-
 
     // update hops count
     myhops[cow_index] = hops;
@@ -174,6 +165,12 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     packetbuf_copyfrom(&command.id, 1);
     mesh_send(&mesh, from); // send ACK
 
+    // find cows index in data structures
+    int cow_index = find_cow_with_id(command.target);
+    // update info on how many times the cow is seen
+    cows_seen_counter[cow_index] += 1;
+    cows_seen_counter_status |= 1 << cow_index;
+
     handleCommand(&command);
   } 
   // Emergency message
@@ -184,6 +181,12 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
 
     packetbuf_copyfrom(&eMsg.id, 1);
     mesh_send(&mesh, from); // send ACK
+
+    // find cows index in data structures
+    int cow_index = find_cow_with_id(eMsg.mote_id);
+    // update info on how many times the cow is seen
+    cows_seen_counter[cow_index] += 1;
+    cows_seen_counter_status |= 1 << cow_index;
 
     printEmergencyMsg(&eMsg);
   }
