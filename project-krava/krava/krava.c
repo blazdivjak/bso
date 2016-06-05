@@ -14,7 +14,6 @@
 #define PRINTF(...)
 #endif
 
-
 /*
 * Mesh functions
 */
@@ -115,10 +114,10 @@ void handleCommand(CmdMsg *command) {
     	setPower(15);
     }else{
     	PRINTF("COMMAND: I am new local gateway.\n");
-    	status.iAmGateway = 0;   	
+    	status.iAmInCluster = 0;
     	status.iAmGateway = 1;
     	setPower(CC2420_TXPOWER_MAX);
-
+    	currentGateway = defaultGateway;
     	//Disable neigbor advertisments and sensing for clsuter duration
     	neighbor_advertisment_interval = CLUSTER_INTERVAL;
     	neighbor_sense_interval = CLUSTER_INTERVAL;
@@ -183,13 +182,12 @@ Emergency mode handling
 void handleEmergencyOne() {
 
 	//Reconfigure timers
-	PRINTF("EMERGENCY: Searching for lost krava.\n");
-	mesh_refresh_interval = (CLOCK_SECOND)*30;
+	PRINTF("EMERGENCY: #2 Searching for lost krava.\n");
 
 	status.emergencyOne = 2;
 
 	//full power
-	setPower(CC2420_TXPOWER_MAX);	
+	setPower(CC2420_TXPOWER_MAX);
 }
 
 void handleEmergencyTwo(uint8_t target) {
@@ -249,10 +247,10 @@ void cancelSysEmergencyTwo() {
 void toggleEmergencyOne() {
 	
 	if(status.ackCounter==0) {
-		PRINTF("EMERGENCY: Emergency One triggered.\n");
+		PRINTF("EMERGENCY: #1 Lost connectivity to gateway.\n");
 		status.emergencyOne = 1;
 		currentGateway = DEFAULT_GATEWAY_ADDRESS;
-		mesh_refresh_interval = (CLOCK_SECOND)*60;
+		mesh_refresh_interval = MESH_REFRESH_INTERVAL/10;
 		etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 		
 		//Full power & mesh reinitialize
