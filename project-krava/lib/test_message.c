@@ -67,24 +67,6 @@ int main()
 	mNew = m;
 	printMessage(&mNew);
 
-	printf("\n\nPackets...\n");
-	Packets p;
-	resetPackets(&p);
-	addMessage(&p, &m);
-	mNew.id++;
-	addMessage(&p, &mNew);
-	printf("Message ids in packets: ");
-	for (i=0; i<p.count; i++) {
-		printf("%d, ", p.payload[i].id);
-	}
-	printf("\n");
-	ackMessage(&p, m.id);
-	printf("Message ids in packets: ");
-	for (i=0; i<p.count; i++) {
-		printf("%d, ", p.payload[i].id);
-	}
-	printf("\n");
-
 
 	printf("\n\nGateway Message\n");
 	CmdMsg g;

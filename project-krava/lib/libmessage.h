@@ -63,18 +63,6 @@ uint8_t getEncodeDataSize(struct Message *m);
 void printMessage(struct Message *m);
 void decode(uint8_t * buffer, uint8_t buffer_len, struct Message *m);
 
-/* 
- * Struct and helper functions for packets monitoring
- */
-typedef struct Packets {
-	uint8_t count;
-	struct Message payload[BUFFER_MAX_SIZE];
-} Packets;
-
-void resetPackets (struct Packets *p);
-void addMessage (struct Packets *p, struct Message *message);
-void ackMessage (struct Packets *p, uint8_t messageID);
-
 
 typedef struct CmdMsg {
 	uint8_t id;		// Msg id

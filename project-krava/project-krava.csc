@@ -158,8 +158,8 @@
       <breakpoints />
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>62.98584183183796</x>
-        <y>22.051572717793995</y>
+        <x>61.79081329503899</x>
+        <y>23.963618376672347</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -200,7 +200,7 @@
   <plugin>
     org.contikios.cooja.plugins.LogListener
     <plugin_config>
-      <filter>ID:4 ACK</filter>
+      <filter>ID:1 ACK</filter>
       <formatted_time />
       <coloring />
     </plugin_config>
@@ -250,7 +250,7 @@
       <scrollpos>0,0</scrollpos>
     </plugin_config>
     <width>633</width>
-    <z>4</z>
+    <z>3</z>
     <height>417</height>
     <location_x>4</location_x>
     <location_y>398</location_y>
@@ -258,7 +258,7 @@
   <plugin>
     PowerTracker
     <width>400</width>
-    <z>3</z>
+    <z>4</z>
     <height>400</height>
     <location_x>1289</location_x>
     <location_y>2</location_y>

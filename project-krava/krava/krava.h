@@ -72,6 +72,8 @@ static uint8_t sendFailedCounter = 0;
 #define NEIGHBOR_SENSE_INTERVAL (CLOCK_SECOND)*5 //5
 #define NEIGHBOR_SENSE_TIME (CLOCK_SECOND)/4
 #define NEIGHBOR_ADVERTISEMENT_INTERVAL (CLOCK_SECOND)*5
+#define ERROR_RECOVERY_INTERVAL CLOCK_SECOND * 4
+
 #define RSSI_TRESHOLD -75
 
 static unsigned long neighbor_sense_interval = NEIGHBOR_SENSE_INTERVAL;
@@ -86,8 +88,6 @@ static int rssiTreshold = RSSI_TRESHOLD;
 
 Message m; //message we save to
 Message mNew; //new message received for decoding
-Packets myPackets; //list of packets sent and waiting to be acked
-Packets otherKravaPackets; //list of packets sent from other kravas if I am gateway
 CmdMsg command;
 EmergencyMsg eTwoRSSI, eTwoAcc;
 
@@ -165,5 +165,23 @@ void readBattery();
 void readTemperature();
 void readMovement();
 int readRSSI();
+
+// Error detection and recovery 
+static struct etimer error_recovery_interval;
+
+#define NUM_ACK_ENTRIES 16
+#define NUM_OF_RETRIES 6
+struct ack_entry {
+  struct ack_entry *next;
+  uint8_t to;
+  uint8_t buffer_size;
+  uint8_t buffer[MAX_PACKET_PAYLOAD_SIZE];
+  uint8_t retries;
+};
+LIST(ack_list);
+MEMB(ack_mem, struct ack_entry, NUM_ACK_ENTRIES);
+
+void findRemoveFromAckList(uint8_t id, uint8_t mote_id);
+uint8_t addToAckList(uint8_t to, uint8_t *buffer, uint8_t buffer_size);
 
 #endif

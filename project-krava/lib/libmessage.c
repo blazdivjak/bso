@@ -179,49 +179,7 @@ void decode(uint8_t * buffer, uint8_t buffer_len, struct Message *m)
 	}
 }
 
-/*
- * Resets Packets strructure 
- */
-void resetPackets (struct Packets *p) {
-	p->count = 0;
-}
 
-/*
- * Add Message to Packets buffer
- */
-void addMessage (struct Packets *p, struct Message *message) {
-	// if the packets buffer is full ditch the last packet to make room for new one
-	if (p->count == BUFFER_MAX_SIZE) {
-		uint8_t i;
-		for (i = 1; i < BUFFER_MAX_SIZE; i++) {
-			p->payload[i - 1] = p->payload[i];
-		}
-		p->count--;
-	}
-	p->payload[p->count] = *message;
-	p->count++;
-}
-
-
-/*
- * Removes Message structure from Packets buffer
- */
-void ackMessage (struct Packets *p, uint8_t messageID) {
-	uint8_t i;
-	for (i = 0; i < p->count; i += 1) {
-		if (p->payload[i].id == messageID) {
-			// printf("Message with ID %d found on location %d\n", messageID, i);
-			break;
-		}
-	}
-	if (i == p->count)
-		return;
-
-	for (; i < p->count - 1; i++) {
-		p->payload[i] = p->payload[i+1];
-	}
-	p->count--;
-}
 
 // Always encodes it to 3 bytes (3 x uint8_t)
 void encodeCmdMsg(struct CmdMsg *m, uint8_t *buffer) {

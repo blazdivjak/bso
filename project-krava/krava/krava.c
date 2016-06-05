@@ -31,7 +31,7 @@ static void timedout(struct mesh_conn *c)
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
    
-  PRINTF("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  PRINTF("MESSAGES: Data received from %d.%d: %d bytes, id: %d\n",from->u8[0], from->u8[1], packetbuf_datalen(), ((uint8_t *)packetbuf_dataptr())[0]);
   // PRINTF("buffer[0]=0x%x\n", (((uint8_t *)packetbuf_dataptr())[0] & 0x03));
 
   // copy received message to local buffer
@@ -45,7 +45,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   //ACK
   if(packetbuf_datalen()==1){
   	PRINTF("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
-  	ackMessage(&myPackets, ((uint8_t *)packetbuf_dataptr())[0]);
+  	findRemoveFromAckList(((uint8_t *)packetbuf_dataptr())[0], from->u8[0]);
   	status.ackCounter+=1;
   }
   //Krava message
@@ -364,6 +364,8 @@ void sendCommand() {
 	addr_send.u8[1] = 0;  
 	mesh_send(&mesh, &addr_send);
 	resetCmdMsg(&command);
+
+	addToAckList(currentGateway, command_buffer, CMD_BUFFER_MAX_SIZE);
 }
 
 void forward(uint8_t *buffer, uint8_t length) {
@@ -374,16 +376,13 @@ void forward(uint8_t *buffer, uint8_t length) {
 	addr_send.u8[1] = 0;
 	packetbuf_copyfrom(buffer, length);
 	mesh_send(&mesh, &addr_send);
+
+	addToAckList(currentGateway, buffer, length);
 }
 
 void sendMessage() {
 
 	setMsgId(&m, m.id+1);
-
-	//Copy message  
-	addMessage(&myPackets, &m);
-
-	//TODO: Poslji komplet pakete
 
 	PRINTF("MESSAGES: Sending message with content of size %d bytes\n", getEncodeDataSize(&m));
 	printMessage(&m);
@@ -396,6 +395,8 @@ void sendMessage() {
 	addr_send.u8[1] = 0;
 	mesh_send(&mesh, &addr_send);
 	resetMessage(&m);
+
+	addToAckList(currentGateway, send_buffer, size);
 }
 
 void sendEmergencyTwoRSSI() {
@@ -408,6 +409,8 @@ void sendEmergencyTwoRSSI() {
 	addr_send.u8[1] = 0;  
 	mesh_send(&mesh, &addr_send);
 	resetEmergencyMsg(&eTwoRSSI);
+
+	addToAckList(currentGateway, emergencyBuffer, size);
 }
 
 void sendEmergencyTwoAcc() {
@@ -420,6 +423,8 @@ void sendEmergencyTwoAcc() {
 	addr_send.u8[1] = 0;  
 	mesh_send(&mesh, &addr_send);
 	resetEmergencyMsg(&eTwoAcc);
+
+	addToAckList(currentGateway, emergencyBuffer, size);
 }
 
 
@@ -520,13 +525,54 @@ int readRSSI(){
   return packetbuf_attr(PACKETBUF_ATTR_RSSI) - 45;
 }
 
+void findRemoveFromAckList(uint8_t id, uint8_t mote_id) {
+  struct ack_entry *e = NULL;
+  // PRINTF("ACK LIST: Searching... List size: %d\n", list_length(ack_list));
+
+  for(e = list_head(ack_list); e != NULL; e = list_item_next(e)) {
+    // PRINTF("ACK LIST: Id=%d, Mote ID=%d\n", e->buffer[0], e->to);
+    if(id == e->buffer[0] && mote_id == e->to) {
+      break;
+    }
+  }
+
+  if (e == NULL) {
+    PRINTF("ACK LIST: Didnt find ack id %d from %d.0. List size: %d\n", id, mote_id, list_length(ack_list));
+    return;
+  } 
+
+  list_remove(ack_list, e);
+  memb_free(&ack_mem, e);
+  PRINTF("ACK LIST: Found and removed ack id %d from %d.0. List size: %d\n", id, mote_id, list_length(ack_list));
+
+  return;
+}
+
+uint8_t addToAckList(uint8_t to, uint8_t *buffer, uint8_t buffer_size) {
+	findRemoveFromAckList(buffer[0], to);
+
+	struct ack_entry *ack = memb_alloc(&ack_mem);
+	if (ack != NULL) {
+		ack->next = NULL;
+		ack->to = to;
+		ack->retries=0;
+		ack->buffer_size = buffer_size;
+		memcpy(ack->buffer, buffer, buffer_size);
+		list_push(ack_list, ack);
+		PRINTF("ACK LIST: adding id %d mote id %d. list size: %d\n", buffer[0], to, list_length(ack_list));
+		return 0;
+	} 
+	return 1;
+}
+
 /*
 *Process definitions
 */
 PROCESS(krava, "Krava");
 PROCESS(communication, "Communication");
 PROCESS(neighbors, "Sense neigbors");
-AUTOSTART_PROCESSES(&krava, &communication, &neighbors);
+PROCESS(error_recovery, "Error recovery process");
+AUTOSTART_PROCESSES(&krava, &communication, &neighbors, &error_recovery);
 /*
 * Krava process
 */
@@ -542,8 +588,6 @@ PROCESS_THREAD(krava, ev, data)
 	status.emergencyTwo = 0;	 
 	resetMessage(&m);
 	resetMessage(&mNew);
-	resetPackets(&myPackets);
-	resetPackets(&otherKravaPackets);
 	resetCmdMsg(&command);
 	resetEmergencyMsg(&eTwoRSSI);
 	setEmergencyMsgType(&eTwoRSSI, MSG_E_TWO_RSSI);
@@ -695,4 +739,53 @@ PROCESS_THREAD(neighbors, ev, data)
 		}				
 	}
 	PROCESS_END();
+}
+
+PROCESS_THREAD(error_recovery, ev, data) {
+  //Our process 
+  PROCESS_BEGIN();
+  PRINTF("Error recovery process\n");
+
+  list_init(ack_list);
+  memb_init(&ack_mem);
+
+  etimer_set(&error_recovery_interval, ERROR_RECOVERY_INTERVAL);
+  static volatile struct ack_entry *entry;
+
+  while(1) {
+    PROCESS_WAIT_EVENT();
+    if(etimer_expired(&error_recovery_interval)){
+
+      if (list_length(ack_list) > 1) {
+        etimer_set(&error_recovery_interval, (CLOCK_SECOND)/4);
+
+        for(entry = list_head(ack_list);
+          entry != NULL;
+          entry = list_item_next(entry)) {
+          PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&error_recovery_interval));  
+
+          entry->retries++;
+          linkaddr_t retry_addr;
+          retry_addr.u8[0] = entry->to;
+          retry_addr.u8[1] = 0;
+
+          packetbuf_copyfrom(entry->buffer, entry->buffer_size);
+          mesh_send(&mesh, &retry_addr);
+          PRINTF("ACK ERROR: Retry sending msg ID %d to %d.0, size %d bytes\n", entry->buffer[0], entry->to, entry->buffer_size);
+          if (entry->retries >= NUM_OF_RETRIES) {
+            PRINTF("ACK ERROR: Max num of retries for msg ID %d to %d.0. Removing it..\n", entry->buffer[0], entry->to);
+            findRemoveFromAckList(entry->buffer[0], entry->to);
+          }
+          etimer_reset(&error_recovery_interval);
+        }
+
+        etimer_set(&error_recovery_interval, ERROR_RECOVERY_INTERVAL);
+
+      } else {
+        etimer_reset(&error_recovery_interval);
+      }
+    }
+  }
+
+  PROCESS_END();
 }

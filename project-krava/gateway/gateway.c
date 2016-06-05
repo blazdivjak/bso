@@ -72,18 +72,28 @@ static void handleCommand(CmdMsg *command) {
 
   if (command->cmd == CMD_EMERGENCY_ONE) {
     printf("COMMAND: Emergency one, cow unreachable id: %d\n", command->target_id);
-
+    PRINTF("COMMAND: Adding command %d taget: %d to buffer.\n", command->cmd, command->target_id);
+    ringbuf_put(&commanderBuff, CMD_EMERGENCY_TWO);
+    ringbuf_put(&commanderBuff, command->target_id);
   } else if (command->cmd == CMD_EMERGENCY_TWO) {
     printf("COMMAND: Emergency two, cow running id: %d\n", command->target_id);
     //broadcast_CmdMsg(CMD_EMERGENCY_TWO, command->target_id);
-
+    PRINTF("COMMAND: Adding command %d taget: %d to buffer.\n", command->cmd, command->target_id);
+    ringbuf_put(&commanderBuff, CMD_EMERGENCY_TWO);
+    ringbuf_put(&commanderBuff, command->target_id);
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
     printf("COMMAND: Emergency one cancel, cow id: %d\n", command->target_id);
     //broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, command->target_id);
+    PRINTF("COMMAND: Adding command %d taget: %d to buffer.\n", command->cmd, command->target_id);
+    ringbuf_put(&commanderBuff, CMD_EMERGENCY_TWO);
+    ringbuf_put(&commanderBuff, command->target_id);
 
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
     printf("COMMAND: Emergency two cancel, cow id: %d\n", command->target_id);
     //broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_TWO, command->target_id);
+    PRINTF("COMMAND: Adding command %d taget: %d to buffer.\n", command->cmd, command->target_id);
+    ringbuf_put(&commanderBuff, CMD_EMERGENCY_TWO);
+    ringbuf_put(&commanderBuff, command->target_id);
   } 
 }
 
@@ -131,7 +141,7 @@ static void timedout(struct mesh_conn *c) {
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
-  PRINTF("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
+  PRINTF("MESSAGES: Data received from %d.%d: %d bytes, id: %d\n",from->u8[0], from->u8[1], packetbuf_datalen(), ((uint8_t *)packetbuf_dataptr())[0]);
 	
 
   // ACK
@@ -469,10 +479,10 @@ static void handle_cows_seen_refresh() {
 
 void findRemoveFromAckList(uint8_t id, uint8_t mote_id) {
   struct ack_entry *e = NULL;
-  PRINTF("ACK LIST: Searching... List size: %d\n", list_length(ack_list));
+  // PRINTF("ACK LIST: Searching... List size: %d\n", list_length(ack_list));
 
   for(e = list_head(ack_list); e != NULL; e = list_item_next(e)) {
-    PRINTF("ACK LIST: Id=%d, Mote ID=%d\n", e->buffer[0], e->to);
+    // PRINTF("ACK LIST: Id=%d, Mote ID=%d\n", e->buffer[0], e->to);
     if(id == e->buffer[0] && mote_id == e->to) {
       break;
     }
