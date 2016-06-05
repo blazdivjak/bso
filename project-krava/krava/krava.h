@@ -36,7 +36,8 @@ static unsigned long temp_read_intreval = TEMP_READ_INTERVAL;
 static unsigned long ack_count_interval = ACK_COUNT_INTERVAL;
 
 //Timers
-#define CLUSTER_INTERVAL (CLOCK_SECOND)*60*5
+#define CLUSTER_INTERVAL (CLOCK_SECOND)*60*4
+static struct etimer clusterRefreshInterval;
 
 //krava - Mesurements
 static struct etimer movementReadInterval;
