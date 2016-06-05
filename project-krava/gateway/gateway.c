@@ -166,7 +166,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     mesh_send(&mesh, from); // send ACK
 
     // find cows index in data structures
-    int cow_index = find_cow_with_id(command.target);
+    int cow_index = find_cow_with_id(command.target_id);
     // update info on how many times the cow is seen
     cows_seen_counter[cow_index] += 1;
     cows_seen_counter_status |= 1 << cow_index;
