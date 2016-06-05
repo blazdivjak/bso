@@ -140,7 +140,6 @@ static void triggerEmergencyTwo();
 static void cancelEmergencyTwo();
 void setPower(uint8_t powerLevel);
 
-
 /*
 * Communication functions
 */

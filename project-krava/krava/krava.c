@@ -108,6 +108,20 @@ void handleCommand(CmdMsg *command) {
     	
     	//Change power based on RSSI and also adjust RSSI for neighbor detection
     	setPower(15);
+
+    	//Routing
+		const linkaddr_t routeDestination = {0,0};
+		const linkaddr_t nextHop = {currentGateway,0};		
+		struct route_entry *entry;
+		entry = route_lookup(&routeDestination);
+		uint8_t cost = entry->cost;
+		PRINTF("MESSAGES: Decaying route to my ex-gateway. New cost: %d\n", cost);
+		//route_decay(entry);
+		//route_refresh(entry);
+		route_remove(entry);		
+		route_add(&routeDestination, &nextHop,cost+1,0);
+		//route_remove(entry);
+
     }else{
     	PRINTF("COMMAND: I am new local gateway.\n");
     	status.iAmInCluster = 0;
@@ -334,7 +348,7 @@ void sendCommand() {
 
 	linkaddr_t addr_send;     
 	encodeCmdMsg(&command, command_buffer);  
-	packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);       
+	packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;  
 	mesh_send(&mesh, &addr_send);
