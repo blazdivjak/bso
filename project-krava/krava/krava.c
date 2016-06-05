@@ -198,8 +198,7 @@ void handleEmergencyTwo(uint8_t target) {
 
 void cancelSysEmergencyOne() {
 
-	neighbor_sense_interval =  NEIGHBOR_SENSE_TIME;
-	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
+	neighbor_sense_interval =  NEIGHBOR_SENSE_TIME;	
 	
 	if(status.emergencyOne != 0) {
 		
@@ -218,7 +217,6 @@ void cancelSysEmergencyOne() {
 void cancelSysEmergencyTwo() {
 
 	neighbor_sense_interval =  NEIGHBOR_SENSE_INTERVAL;
-	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 
 	PRINTF("EMERGENCY cancel sys #2\n");
 
@@ -238,9 +236,13 @@ void toggleEmergencyOne() {
 	if(status.ackCounter==0) {
 		PRINTF("EMERGENCY: #1 Lost connectivity to gateway.\n");
 		status.emergencyOne = 1;
+		status.iAmGateway = 0;
+		status.iAmInCluster = 0;
 		currentGateway = DEFAULT_GATEWAY_ADDRESS;
-		mesh_refresh_interval = MESH_REFRESH_INTERVAL/10;
-		etimer_set(&meshRefreshInterval, mesh_refresh_interval);
+		PRINTF("CLUSTERS: Flushing neighbor table\n");
+		m.neighbourCount = 0;
+		PRINTF("NETWORK: Flushing neighbor table\n");		
+		route_flush_all();		
 		
 		//Full power & mesh reinitialize
 		setPower(CC2420_TXPOWER_MAX);
@@ -248,8 +250,6 @@ void toggleEmergencyOne() {
 	} else {
 		status.ackCounter=0;	
 		status.emergencyOne=0;
-		mesh_refresh_interval = MESH_REFRESH_INTERVAL;	
-		etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 	}	
 }
 
@@ -260,7 +260,7 @@ static void triggerEmergencyTwo() {
 	}
 	
 	status.emergencyTwo = 1;
-	PRINTF("EMERGENCY: Emergency Two triggered\n");
+	PRINTF("EMERGENCY: #2 Triggered\n");
 
 	resetCmdMsg(&command);
 	command.cmd = CMD_EMERGENCY_TWO;
@@ -281,7 +281,7 @@ static void cancelEmergencyTwo() {
 		return;
 	} 
 
-	PRINTF("EMERGENCY: Emergency Two canceled\n");
+	PRINTF("EMERGENCY: #2 Canceled\n");
 	status.emergencyTwo = 0;
 	resetCmdMsg(&command);
 	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
@@ -657,9 +657,7 @@ PROCESS_THREAD(neighbors, ev, data)
 								
 		//send advertisment to your neighbors every 5s
 		if(etimer_expired(&neighborAdvertismentInterval)){
-			
-			PRINTF("Neighbor advertisment.\n");
-
+						
 			broadcast_open(&broadcast, 129, &broadcast_call);
  			packetbuf_copyfrom("Hello", 5);    
     		broadcast_send(&broadcast);

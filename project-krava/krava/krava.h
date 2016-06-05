@@ -25,7 +25,7 @@
 #define TEMP_READ_INTERVAL (CLOCK_SECOND)*30
 //#define BATTERY_READ_INTERVAL (CLOCK_SECOND)*30 the same as temperature read interval
 #define SEND_INTERVAL (CLOCK_SECOND)*30
-#define ACK_COUNT_INTERVAL (CLOCK_SECOND)*120
+#define ACK_COUNT_INTERVAL (CLOCK_SECOND)*60
 
 static unsigned long mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 static unsigned long send_interval = SEND_INTERVAL/2;
