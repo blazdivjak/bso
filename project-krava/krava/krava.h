@@ -18,7 +18,6 @@
 #include "../lib/libmessage.h"
 #include "random.h"
 #include "cc2420.h"
-//#include "../lib/libmath.h"
 
 #define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)
 #define RSSI_READ_INTERVAL (CLOCK_SECOND)*5
@@ -37,6 +36,7 @@ static unsigned long temp_read_intreval = TEMP_READ_INTERVAL;
 static unsigned long ack_count_interval = ACK_COUNT_INTERVAL;
 
 //Timers
+#define CLUSTER_INTERVAL (CLOCK_SECOND)*60*5
 
 //krava - Mesurements
 static struct etimer movementReadInterval;
@@ -73,7 +73,6 @@ static uint8_t sendFailedCounter = 0;
 #define NEIGHBOR_ADVERTISEMENT_INTERVAL (CLOCK_SECOND)*5
 #define RSSI_TRESHOLD -75
 
-static unsigned long neighbor_table_reinitialize_interval = NEIGHBOR_TABLE_REINITIALIZE_INTERVAL;
 static unsigned long neighbor_sense_interval = NEIGHBOR_SENSE_INTERVAL;
 static unsigned long  neighbor_sense_time = NEIGHBOR_SENSE_TIME;
 static unsigned long  neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
@@ -106,6 +105,7 @@ static uint8_t txpower;
 
 struct {	
 	uint8_t iAmGateway : 1;
+	uint8_t iAmInCluster : 1;
 	uint8_t emergencyOne : 2;
 	uint8_t emergencyTwo : 2;
 	uint8_t emergencyTarget : 8;
@@ -127,6 +127,8 @@ const static struct mesh_callbacks callbacks = {recv, sent, timedout};
 
 // Handle gateway commands
 void handleCommand(CmdMsg *command);
+//Cluster learning mode
+void clusterLearningMode();
 // Emergency mode handling
 void handleEmergencyOne();
 void handleEmergencyTwo(uint8_t target);

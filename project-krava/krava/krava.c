@@ -100,16 +100,28 @@ void handleCommand(CmdMsg *command) {
 
     //set gateway
     if(command->target_id!=node_id){
+
+    	//Configure as gateway
     	PRINTF("COMMAND: Setting new Gateway.\n");
     	status.iAmGateway = 0;
-    	currentGateway = command->target_id;	
+    	status.iAmInCluster = 1;
+    	currentGateway = command->target_id;
+
+    	//Disable neigbor advertisments and sensing for clsuter duration
+		neighbor_advertisment_interval = CLUSTER_INTERVAL;
+    	neighbor_sense_interval = CLUSTER_INTERVAL;
     	
     	//TODO: Change power based on RSSI and also adjust RSSI for neighbor detection
     	setPower(15);
     }else{
     	PRINTF("COMMAND: I am new local gateway.\n");
+    	status.iAmGateway = 0;   	
     	status.iAmGateway = 1;
     	setPower(CC2420_TXPOWER_MAX);
+
+    	//Disable neigbor advertisments and sensing for clsuter duration
+    	neighbor_advertisment_interval = CLUSTER_INTERVAL;
+    	neighbor_sense_interval = CLUSTER_INTERVAL;
     }      
   } else if (command->cmd == CMD_QUERY_MOTE) {
     PRINTF("COMMAND: Query from gateway: %d\n", command->target_id);
@@ -127,6 +139,35 @@ void handleCommand(CmdMsg *command) {
     PRINTF("COMMAND: Emergency two cancel, cow id: %d\n", command->target_id);
     cancelSysEmergencyTwo();
   }
+}
+
+/*
+Cluster handling
+*/
+
+void clusterLearningMode(){
+
+	//Disable cluster
+	PRINTF("CLUSTERS: Initializing cluster learning mode.\n");
+	status.iAmGateway = 0;
+	status.iAmInCluster = 0;
+
+	//Initialize neighbor discovery
+	PRINTF("CLUSTERS: Searching for neighbors.\n");
+	neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
+	neighbor_sense_interval = NEIGHBOR_SENSE_INTERVAL;
+
+	//Full powah owjea
+	setPower(CC2420_TXPOWER_MAX);
+
+	//Set to default gateway
+	PRINTF("CLUSTERS: Setting my current gateway to: %d.0.\n", defaultGateway);
+	currentGateway = defaultGateway;
+
+	//Flushing neighbors
+	PRINTF("CLUSTERS: Flushing neighbor table\n");
+	m.neighbourCount = 0;
+
 }
 
 /*
@@ -558,8 +599,7 @@ PROCESS_THREAD(communication, ev, data)
 			etimer_reset(&ackCountInterval);
 		}		
 		if(etimer_expired(&meshRefreshInterval)){
-			PRINTF("NETWORK: Routing table flush\n");			
-			m.neighbourCount = 0;
+			PRINTF("NETWORK: Routing table flush\n");						
 			route_flush_all();			
 			etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 		}
@@ -579,8 +619,7 @@ PROCESS_THREAD(neighbors, ev, data)
 
 	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval*60*5);
 	etimer_set(&neighborSenseInterval, neighbor_sense_interval*60*5);
-	etimer_set(&neighborSenseTime, neighbor_sense_time);
-	etimer_set(&neighborTableRinitializeInterval, neighbor_table_reinitialize_interval);
+	etimer_set(&neighborSenseTime, neighbor_sense_time);	
 	uint8_t sensing = 0;	
 	//Process main loop
 
@@ -590,10 +629,11 @@ PROCESS_THREAD(neighbors, ev, data)
 
 	while(1) {
 		
-		PROCESS_WAIT_EVENT();	
+		PROCESS_WAIT_EVENT();
 		
 		//sense neighbors every cca 5s for 1s
 		if(etimer_expired(&neighborSenseInterval)){
+			
 			if(sensing==0){
 				broadcast_open(&broadcast, 129, &broadcast_call);
 				//PRINTF("Sensing for neighbors\n");								
@@ -610,6 +650,12 @@ PROCESS_THREAD(neighbors, ev, data)
 								
 		//send advertisment to your neighbors every 5s
 		if(etimer_expired(&neighborAdvertismentInterval)){
+			
+			//If I am local gateway or a member of cluster disable cluster setting and procceed with 1 minute learning mode for new cluster setup
+			if(status.iAmGateway == 1 || status.iAmInCluster == 1){
+				clusterLearningMode();
+			}
+
 			broadcast_open(&broadcast, 129, &broadcast_call);
  			packetbuf_copyfrom("Hello", 5);    
     		broadcast_send(&broadcast);
