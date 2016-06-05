@@ -216,8 +216,12 @@ void cancelSysEmergencyOne() {
 	
 	if(status.emergencyOne != 0) {
 		
-		//TODO: Back to previous power level
-		setPower(txpower);
+		//Back to previous power level		
+		if(status.iAmInCluster){
+			setPower(15);	
+		}else{
+			setPower(CC2420_TXPOWER_MAX);
+		}		
 
 		status.emergencyOne = 0;
 	}
