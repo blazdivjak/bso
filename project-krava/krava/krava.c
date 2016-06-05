@@ -39,7 +39,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   uint8_t buffer_length = packetbuf_datalen();
   int i = 0;
   for (i = 0; i < buffer_length; i++) {
-  	buffer[i] = ((uint8_t *) packetbuf_dataptr())[i];
+  	buffer[i] = ((uint8_t *)packetbuf_dataptr())[i];
   }
 
   //ACK
@@ -69,9 +69,10 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   	//Send ACK for packet  	
   	packetbuf_copyfrom(packetbuf_dataptr(), 1);
     mesh_send(&mesh, from); // send ACK
+    // PRINTF("Buffer[0]=0x%x, [1]=0x%x, [2]=0x%x\n", buffer[0], buffer[1], buffer[2] );
 
   	CmdMsg command;
-    decodeCmdMsg(packetbuf_dataptr(), &command);
+    decodeCmdMsg(buffer, &command);
 
     handleCommand(&command);
   }   
@@ -86,12 +87,12 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
 
     #if DEBUG
     EmergencyMsg eMsg;
-	decodeEmergencyMsg(packetbuf_dataptr(), &eMsg);
+	decodeEmergencyMsg(buffer, &eMsg);
   	printEmergencyMsg(&eMsg);
   	#endif
 
   	//Forward emergency
-	forward(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen());
+	forward(&buffer, buffer_length);
   } 
 
 }

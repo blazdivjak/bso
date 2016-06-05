@@ -100,6 +100,8 @@ static void broadcast_CmdMsg(uint8_t command_id, uint8_t target, uint8_t destina
   sent_cmd_addr.u8[0] = destinationAddress;
   sent_cmd_addr.u8[1] = 0;
   PRINTF("COMMAND Sending to %d.0\n", sent_cmd_addr.u8[0]);
+  // PRINTF("Buffer[0]=0x%x, [1]=0x%x, [2]=0x%x\n", command_buffer[0], command_buffer[1], command_buffer[2]);
+
   mesh_send(&mesh, &sent_cmd_addr);
 
   struct ack_entry *ack = memb_alloc(&ack_mem);
