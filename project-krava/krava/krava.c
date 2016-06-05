@@ -577,12 +577,17 @@ PROCESS_THREAD(neighbors, ev, data)
 	PROCESS_BEGIN();
 	PRINTF("Neighbor discovery process\n");
 
-	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
-	etimer_set(&neighborSenseInterval, neighbor_sense_interval);
+	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval*60*5);
+	etimer_set(&neighborSenseInterval, neighbor_sense_interval*60*5);
 	etimer_set(&neighborSenseTime, neighbor_sense_time);
 	etimer_set(&neighborTableRinitializeInterval, neighbor_table_reinitialize_interval);
 	uint8_t sensing = 0;	
 	//Process main loop
+
+	PROCESS_WAIT_EVENT();
+	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
+	etimer_set(&neighborSenseInterval, neighbor_sense_interval);
+
 	while(1) {
 		
 		PROCESS_WAIT_EVENT();	

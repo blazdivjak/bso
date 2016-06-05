@@ -16,15 +16,18 @@
 #include "net/rime/rime.h"
 #include "net/rime/mesh.h"
 #include "sys/node-id.h" 
+#include "sys/stimer.h" 
 #include "../lib/libmessage.h"
 #include "random.h"
+#include "ringbuf.h"
 #include <setjmp.h>  // exceptions
 
 // timers
-#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*360
+#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*60*10
 #define COW_MISSING_INTERVAL (CLOCK_SECOND)*10 // interval in which alarm is raised after the cow went missing
 #define COWS_SEEN_COUNTER_INTERVAL (CLOCK_SECOND)*60 // interval in which every cow should be able to deliver at least one message
 #define CLUSTERS_REFRESH_INTERVAL (CLOCK_SECOND)*40
+#define COMMAND_SEND_INTERVAL (CLOCK_SECOND)*1
 
 // uart and commands
 #define UART0_CONF_WITH_INPUT 1
@@ -40,8 +43,8 @@ static uint8_t sendFailedCounter = 0;
 
 // cows registered and present in network
 #define MAX_NUMBER_OF_COWS 32
-#define NUMBER_OF_COWS 3
-static int register_cows[NUMBER_OF_COWS] = {1, 2, 3}; // register cow addresses
+#define NUMBER_OF_COWS 20
+static int register_cows[NUMBER_OF_COWS] = {1, 2, 3, 5, 6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21}; // register cow addresses
 static uint32_t cows_registered = 0; // bitmap for registered cows
 static uint32_t cows_missing = 0; // bitmap for missing cows
 static uint8_t cows_seen_counter[NUMBER_OF_COWS]; // count how many times the cow is seen in network - if zero raise alarm
@@ -71,6 +74,9 @@ static int cluster_scores[NUMBER_OF_COWS];  // scores for each cluster candidate
 static uint8_t clusters_count; // number of clusters in network
 static struct Cluster clusters[NUMBER_OF_COWS];  // cluster objects
 
+//Ringbuffer
+
+
 // mesh
 static struct mesh_conn mesh;
 
@@ -86,6 +92,11 @@ static struct etimer cows_missing_interval;
 static struct etimer meshRefreshInterval;
 static struct etimer clusters_refresh_interval;
 static struct etimer cows_seen_counter_refresh_interval;
+static struct etimer commander_interval;
+
+static struct ringbuf commanderBuff;
+#define COMMANDER_BUFF_SIZE 8
+static uint8_t commanderBuff_data[COMMANDER_BUFF_SIZE];
 
 // status of nodes in network
 struct {
@@ -103,7 +114,7 @@ static int find_cow_id_from_bitmap(uint32_t bitmap);
 
 /* Command functions */
 static void handleCommand(CmdMsg *command);
-static void broadcast_CmdMsg(int command_id, int target);
+static void broadcast_CmdMsg(uint8_t command_id, uint8_t target, uint8_t destinationAddress);
 static int readRSSI();
 
 /* Initialize mesh */

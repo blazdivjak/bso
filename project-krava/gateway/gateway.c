@@ -75,35 +75,34 @@ static void handleCommand(CmdMsg *command) {
 
   } else if (command->cmd == CMD_EMERGENCY_TWO) {
     printf("COMMAND: Emergency two, cow running id: %d\n", command->target_id);
-    broadcast_CmdMsg(CMD_EMERGENCY_TWO, command->target_id);
+    //broadcast_CmdMsg(CMD_EMERGENCY_TWO, command->target_id);
 
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_ONE) {
     printf("COMMAND: Emergency one cancel, cow id: %d\n", command->target_id);
-    broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, command->target_id);
+    //broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, command->target_id);
 
   } else if (command->cmd == CMD_CANCEL_EMERGENCY_TWO) {
     printf("COMMAND: Emergency two cancel, cow id: %d\n", command->target_id);
-    broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_TWO, command->target_id);
+    //broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_TWO, command->target_id);
   } 
 }
 
-static void broadcast_CmdMsg(int command_id, int target) {
+static void broadcast_CmdMsg(uint8_t command_id, uint8_t target, uint8_t destinationAddress) {
+  
+  
   PRINTF("COMMAND: Broadcasting command %d\n", command_id);
   resetCmdMsg(&command);
   command.cmd = command_id;
   command.target_id = target;
   encodeCmdMsg(&command, command_buffer);
-  linkaddr_t addr;
-  addr.u8[0] = myAddress_1;
-  addr.u8[1] = myAddress_2;
-  int i;
-  for (i = 0; i < NUMBER_OF_COWS; i++) {
-    packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
-    addr.u8[0] = register_cows[i];
-    PRINTF("COMMAND Sending to %d.0\n", addr.u8[0]);
-    mesh_send(&mesh, &addr);
-    clock_wait(192);
-  }
+    
+  packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
+  linkaddr_t sent_cmd_addr;
+  sent_cmd_addr.u8[0] = destinationAddress;
+  sent_cmd_addr.u8[1] = 0;
+  PRINTF("COMMAND Sending to %d.0\n", sent_cmd_addr.u8[0]);
+  mesh_send(&mesh, &sent_cmd_addr);
+
 }
 
 static int readRSSI() {
@@ -398,7 +397,9 @@ static void handle_missing_cows() {
     status.emergency_missing = 0;
     cows_seen_alarm_window = COWS_SEEN_ALARM_WINDOW;
     if (old_emergency_missing ^ status.emergency_missing) { // only send cancel if previous command was alarm
-      broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, target);
+      PRINTF("COMMAND: Adding command %d taget: %d to buffer.\n", CMD_CANCEL_EMERGENCY_ONE, target);
+      ringbuf_put(&commanderBuff, CMD_CANCEL_EMERGENCY_ONE);
+      ringbuf_put(&commanderBuff, target);
     }
   }
 
@@ -407,13 +408,18 @@ static void handle_missing_cows() {
     cows_seen_alarm_window -= 1;
     if (cows_seen_alarm_window <= 0) { // disable alarm after cows_seen_alarm_window iterations of alarm
       status.emergency_missing = 0;
-      cows_seen_alarm_window = COWS_SEEN_ALARM_WINDOW;
-      broadcast_CmdMsg(CMD_CANCEL_EMERGENCY_ONE, target);
+      cows_seen_alarm_window = COWS_SEEN_ALARM_WINDOW;    
+      PRINTF("COMMAND: Adding command %d taget: %d to buffer.\n", CMD_CANCEL_EMERGENCY_ONE, target);        
+      ringbuf_put(&commanderBuff, CMD_CANCEL_EMERGENCY_ONE);
+      ringbuf_put(&commanderBuff, target);      
     }
   }
 
   if (status.emergency_missing > 0) {
-    broadcast_CmdMsg(CMD_EMERGENCY_ONE, target);
+    //TODO: Add command to buffer
+    PRINTF("COMMAND: Adding command %d taget: %d to buffer.\n", CMD_CANCEL_EMERGENCY_ONE, target);    
+    ringbuf_put(&commanderBuff, CMD_EMERGENCY_ONE);
+    ringbuf_put(&commanderBuff, target);      
   }
 }
 
@@ -433,7 +439,8 @@ static void handle_cows_seen_refresh() {
 
 /* Init process */
 PROCESS(gateway_main, "Main gateway proces");
-AUTOSTART_PROCESSES(&gateway_main);
+PROCESS(commander, "Commander proces");
+AUTOSTART_PROCESSES(&gateway_main, &commander);
 
 PROCESS_THREAD(gateway_main, ev, data)
 {  
@@ -499,6 +506,50 @@ PROCESS_THREAD(gateway_main, ev, data)
       }
     }
 
+  }
+  PROCESS_END();
+}
+
+PROCESS_THREAD(commander, ev, data)
+{ 
+  //Our process 
+  PROCESS_BEGIN();
+  PRINTF("Command process\n");
+
+  ringbuf_init(&commanderBuff, commanderBuff_data, sizeof(commanderBuff_data));    
+  etimer_set(&commander_interval, COMMAND_SEND_INTERVAL*100);
+  
+  static volatile uint8_t currentCommand;
+  static volatile uint8_t currentTarget;  
+  static volatile int i;
+
+  PROCESS_WAIT_EVENT();
+  ringbuf_init(&commanderBuff, commanderBuff_data, sizeof(commanderBuff_data));
+  etimer_set(&commander_interval, COMMAND_SEND_INTERVAL);
+
+  //Process main loop
+  while(1) {
+        
+    PROCESS_WAIT_EVENT();
+    
+    if(etimer_expired(&commander_interval)){
+      PRINTF("COMMAND: Checking for pending commands. Number: %d\n", ringbuf_elements(&commanderBuff));
+      if(ringbuf_elements(&commanderBuff)>1){    
+        currentCommand=ringbuf_get(&commanderBuff);
+        currentTarget=ringbuf_get(&commanderBuff);
+        PRINTF("COMMAND: Initializing sending command: %d target: %d\n", currentCommand, currentTarget);
+        etimer_set(&commander_interval, (CLOCK_SECOND)/5);
+        
+        for(i=0;i<NUMBER_OF_COWS;i++){
+          PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&commander_interval));          
+          broadcast_CmdMsg(currentCommand, currentTarget, register_cows[i]);
+          etimer_reset(&commander_interval);
+        }
+        etimer_set(&commander_interval, COMMAND_SEND_INTERVAL);      
+      }else{
+        etimer_reset(&commander_interval);
+      }
+    }                     
   }
   PROCESS_END();
 }
