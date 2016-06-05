@@ -33,6 +33,15 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
    
   PRINTF("MESSAGES: Data received from %d.%d: %d bytes\n",from->u8[0], from->u8[1], packetbuf_datalen());
   // PRINTF("buffer[0]=0x%x\n", (((uint8_t *)packetbuf_dataptr())[0] & 0x03));
+
+  // copy received message to local buffer
+  uint8_t buffer[MAX_PACKET_PAYLOAD_SIZE];
+  uint8_t buffer_length = packetbuf_datalen();
+  int i = 0;
+  for (i = 0; i < buffer_length; i++) {
+  	buffer[i] = ((uint8_t *) packetbuf_dataptr())[i];
+  }
+
   //ACK
   if(packetbuf_datalen()==1){
   	PRINTF("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
@@ -41,18 +50,18 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   }
   //Krava message
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_MESSAGE){
-  	//Send ACK for packet  	
+  	//Send ACK for packet
   	packetbuf_copyfrom(packetbuf_dataptr(), 1);
     mesh_send(&mesh, from); // send ACK
 
     #if DEBUG
     Message fMsg;
-  	decode(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen(), &fMsg);
+  	decode(&buffer, buffer_length, &fMsg);
   	printMessage(&fMsg);
   	#endif
   	
   	//Forward message
-	forward(((uint8_t *)packetbuf_dataptr()), packetbuf_datalen());
+	forward(&buffer, buffer_length);
 
   }
   //Gateway command
@@ -109,6 +118,20 @@ void handleCommand(CmdMsg *command) {
     	
     	//Change power based on RSSI and also adjust RSSI for neighbor detection
     	setPower(15);
+
+    	//Routing
+		const linkaddr_t routeDestination = {0,0};
+		const linkaddr_t nextHop = {currentGateway,0};		
+		struct route_entry *entry;
+		entry = route_lookup(&routeDestination);
+		uint8_t cost = entry->cost;
+		PRINTF("MESSAGES: Decaying route to my ex-gateway. New cost: %d\n", cost);
+		//route_decay(entry);
+		//route_refresh(entry);
+		route_remove(entry);		
+		route_add(&routeDestination, &nextHop,cost+1,0);
+		//route_remove(entry);
+
     }else{
     	PRINTF("COMMAND: I am new local gateway.\n");
     	status.iAmInCluster = 0;
@@ -335,7 +358,7 @@ void sendCommand() {
 
 	linkaddr_t addr_send;     
 	encodeCmdMsg(&command, command_buffer);  
-	packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);       
+	packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;  
 	mesh_send(&mesh, &addr_send);
@@ -343,12 +366,12 @@ void sendCommand() {
 }
 
 void forward(uint8_t *buffer, uint8_t length) {
-	PRINTF("MESSAGES: Forwarding message type=%u id=%u to current gateway: %d.0\n", 
-		(buffer[0]&0x3), (buffer[0]>>2), currentGateway);
+	PRINTF("MESSAGES: Forwarding message type=%u id=%u of length %d bytes to current gateway: %d.0\n", 
+		(buffer[0]&0x3), (buffer[0]>>2), length, currentGateway);
 	linkaddr_t addr_send;
-	packetbuf_copyfrom(buffer, length);
 	addr_send.u8[0] = currentGateway;
 	addr_send.u8[1] = 0;
+	packetbuf_copyfrom(buffer, length);
 	mesh_send(&mesh, &addr_send);
 }
 
@@ -360,6 +383,9 @@ void sendMessage() {
 	addMessage(&myPackets, &m);
 
 	//TODO: Poslji komplet pakete
+
+	PRINTF("MESSAGES: Sending message with content of size %d bytes\n", getEncodeDataSize(&m));
+	printMessage(&m);
 
 	linkaddr_t addr_send; 
 	uint8_t size = encodeData(&m, send_buffer);
