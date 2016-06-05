@@ -102,7 +102,7 @@ static void broadcast_CmdMsg(int command_id, int target) {
     addr.u8[0] = register_cows[i];
     PRINTF("COMMAND Sending to %d.0\n", addr.u8[0]);
     mesh_send(&mesh, &addr);
-    clock_wait(192);
+    // clock_wait(192);
   }
 }
 
@@ -482,7 +482,7 @@ PROCESS_THREAD(gateway_main, ev, data)
 
     if (ev == serial_line_event_message && data != NULL) {
     	PRINTF("SERIAL: received line: %s\n", (char *)data);
-      if (!strcmp(CMD_NUMBER_OF_MOTES, data)) {
+      if (!memcmp(CMD_NUMBER_OF_MOTES, data, 3)) {
         char creg[33], cmis[33];
         char * t = byte_to_binary(cows_registered);
         strcpy(creg, t);
@@ -496,6 +496,20 @@ PROCESS_THREAD(gateway_main, ev, data)
           "cows missing",
           cmis
         );
+      } else if (!memcmp(CMD_QUERY, data, 3)) {
+          uint8_t qId = atoi(&data[3]);
+          PRINTF("QUERY COMMAND: Mote ID = %d\n", qId);
+          CmdMsg cmd;
+          resetCmdMsg(&cmd);
+          cmd.cmd = CMD_QUERY_MOTE;
+          cmd.target_id = qId;
+          encodeCmdMsg(&cmd, command_buffer);
+          linkaddr_t addr;
+          addr.u8[0] = qId;
+          addr.u8[1] = myAddress_2;
+          packetbuf_copyfrom(command_buffer, CMD_BUFFER_MAX_SIZE);
+          PRINTF("COMMAND Sending to %d.0\n", addr.u8[0]);
+          mesh_send(&mesh, &addr);
       }
     }
 
