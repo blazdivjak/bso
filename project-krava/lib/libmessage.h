@@ -35,13 +35,13 @@
  * data over network
  */
 typedef struct Message {
-	uint8_t id;			// message ID
-	uint8_t mote_id;		// mote ID
-	int8_t temp;			// current mote temp
-	uint8_t battery;		//current mote battery level	
-	uint8_t motionCount;
-	uint64_t motions;		// bit encoded "array" of motions, 2 bit motion brackets (32 brackets)
-	uint8_t neighbourCount;	// size of neighbour IDs array
+	uint8_t id;			                // message ID
+	uint8_t mote_id;		            // mote ID
+	int8_t temp;			            // current mote temp
+	uint8_t battery;		            // current mote battery level	
+	uint8_t motionCount;                // number of motions in data struct
+	uint64_t motions;		            // bit encoded "array" of motions, 2 bit motion brackets (32 brackets)
+	uint8_t neighbourCount;	            // size of neighbour IDs array
 	uint8_t neighbours[MAX_NEIGHBOURS];	// pointer to array of neighbour IDs
 } Message;
 
@@ -63,9 +63,21 @@ uint8_t getEncodeDataSize(struct Message *m);
 void printMessage(struct Message *m);
 void decode(uint8_t * buffer, uint8_t buffer_len, struct Message *m);
 
+/* 
+ * Struct and helper functions for packets monitoring
+ */
+typedef struct Packets {
+	uint8_t count;
+	struct Message payload[BUFFER_MAX_SIZE];
+} Packets;
+
+void resetPackets (struct Packets *p);
+void addMessage (struct Packets *p, struct Message *message);
+void ackMessage (struct Packets *p, uint8_t messageID);
+
 
 typedef struct CmdMsg {
-	uint8_t id;		// Msg id
+	uint8_t id;				// Msg id
 	uint8_t cmd;		
 	uint8_t target_id;
 } CmdMsg;
@@ -78,8 +90,8 @@ void resetCmdMsg(struct CmdMsg *m);
 void printCmdMsg(struct CmdMsg *m);
 
 typedef struct EmergencyMsg {
-	uint8_t id;			// Msg id
-	uint8_t mote_id;	// Mote sent id
+	uint8_t id;							// Msg id
+	uint8_t mote_id;					// Mote sent id
 	uint8_t dataCount;
 	uint8_t data[EMERGENCY_DATA_MAX];
 } EmergencyMsg;
