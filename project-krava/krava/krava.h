@@ -21,11 +21,11 @@
 
 #define MOVEMENT_READ_INTERVAL (CLOCK_SECOND)
 #define RSSI_READ_INTERVAL (CLOCK_SECOND)*5
-#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*60*10
+#define MESH_REFRESH_INTERVAL (CLOCK_SECOND)*60*30
 #define TEMP_READ_INTERVAL (CLOCK_SECOND)*30
 //#define BATTERY_READ_INTERVAL (CLOCK_SECOND)*30 the same as temperature read interval
 #define SEND_INTERVAL (CLOCK_SECOND)*30
-#define ACK_COUNT_INTERVAL (CLOCK_SECOND)*120
+#define ACK_COUNT_INTERVAL (CLOCK_SECOND)*60
 
 static unsigned long mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 static unsigned long send_interval = SEND_INTERVAL/2;
@@ -36,7 +36,8 @@ static unsigned long temp_read_intreval = TEMP_READ_INTERVAL;
 static unsigned long ack_count_interval = ACK_COUNT_INTERVAL;
 
 //Timers
-#define CLUSTER_INTERVAL (CLOCK_SECOND)*60*5
+#define CLUSTER_INTERVAL (CLOCK_SECOND)*60*4
+static struct etimer clusterRefreshInterval;
 
 //krava - Mesurements
 static struct etimer movementReadInterval;

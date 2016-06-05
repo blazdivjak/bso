@@ -14,7 +14,6 @@
 #define PRINTF(...)
 #endif
 
-
 /*
 * Mesh functions
 */
@@ -107,26 +106,17 @@ void handleCommand(CmdMsg *command) {
     	status.iAmGateway = 0;
     	status.iAmInCluster = 1;
     	currentGateway = command->target_id;
-
-    	//Disable neigbor advertisments and sensing for clsuter duration
-		neighbor_advertisment_interval = CLUSTER_INTERVAL;
-    	neighbor_sense_interval = CLUSTER_INTERVAL;
     	
-    	//TODO: Change power based on RSSI and also adjust RSSI for neighbor detection
+    	//Change power based on RSSI and also adjust RSSI for neighbor detection
     	setPower(15);
     }else{
     	PRINTF("COMMAND: I am new local gateway.\n");
-    	status.iAmGateway = 0;   	
+    	status.iAmInCluster = 0;
     	status.iAmGateway = 1;
     	setPower(CC2420_TXPOWER_MAX);
-
-    	//Disable neigbor advertisments and sensing for clsuter duration
-    	neighbor_advertisment_interval = CLUSTER_INTERVAL;
-    	neighbor_sense_interval = CLUSTER_INTERVAL;
-    }
-
-	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
-	etimer_set(&neighborSenseInterval, neighbor_sense_interval);
+    	currentGateway = defaultGateway;
+    }		    
+	etimer_set(&clusterRefreshInterval, CLUSTER_INTERVAL);	
 
   } else if (command->cmd == CMD_QUERY_MOTE) {
     PRINTF("COMMAND: Query from gateway: %d\n", command->target_id);
@@ -159,8 +149,6 @@ void clusterLearningMode(){
 
 	//Initialize neighbor discovery
 	PRINTF("CLUSTERS: Searching for neighbors.\n");
-	neighbor_advertisment_interval = NEIGHBOR_ADVERTISEMENT_INTERVAL;
-	neighbor_sense_interval = NEIGHBOR_SENSE_INTERVAL;
 
 	//Full powah owjea
 	setPower(CC2420_TXPOWER_MAX);
@@ -173,8 +161,8 @@ void clusterLearningMode(){
 	PRINTF("CLUSTERS: Flushing neighbor table\n");
 	m.neighbourCount = 0;
 
-	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
-	etimer_set(&neighborSenseInterval, neighbor_sense_interval);	
+	//etimer_set(&clusterRefreshInterval, CLUSTER_INTERVAL);
+
 }
 
 /*
@@ -184,13 +172,12 @@ Emergency mode handling
 void handleEmergencyOne() {
 
 	//Reconfigure timers
-	PRINTF("EMERGENCY: Searching for lost krava.\n");
-	mesh_refresh_interval = (CLOCK_SECOND)*30;
+	PRINTF("EMERGENCY: #2 Searching for lost krava.\n");
 
 	status.emergencyOne = 2;
 
 	//full power
-	setPower(CC2420_TXPOWER_MAX);	
+	setPower(CC2420_TXPOWER_MAX);
 }
 
 void handleEmergencyTwo(uint8_t target) {
@@ -212,13 +199,16 @@ void handleEmergencyTwo(uint8_t target) {
 
 void cancelSysEmergencyOne() {
 
-	neighbor_sense_interval =  NEIGHBOR_SENSE_TIME;
-	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
+	neighbor_sense_interval =  NEIGHBOR_SENSE_TIME;	
 	
 	if(status.emergencyOne != 0) {
 		
-		//TODO: Back to previous power level
-		setPower(txpower);
+		//Back to previous power level		
+		if(status.iAmInCluster){
+			setPower(15);	
+		}else{
+			setPower(CC2420_TXPOWER_MAX);
+		}		
 
 		status.emergencyOne = 0;
 	}
@@ -228,7 +218,6 @@ void cancelSysEmergencyOne() {
 void cancelSysEmergencyTwo() {
 
 	neighbor_sense_interval =  NEIGHBOR_SENSE_INTERVAL;
-	mesh_refresh_interval = MESH_REFRESH_INTERVAL;
 
 	PRINTF("EMERGENCY cancel sys #2\n");
 
@@ -246,11 +235,15 @@ void cancelSysEmergencyTwo() {
 void toggleEmergencyOne() {
 	
 	if(status.ackCounter==0) {
-		PRINTF("EMERGENCY: Emergency One triggered.\n");
+		PRINTF("EMERGENCY: #1 Lost connectivity to gateway.\n");
 		status.emergencyOne = 1;
+		status.iAmGateway = 0;
+		status.iAmInCluster = 0;
 		currentGateway = DEFAULT_GATEWAY_ADDRESS;
-		mesh_refresh_interval = (CLOCK_SECOND)*60;
-		etimer_set(&meshRefreshInterval, mesh_refresh_interval);
+		PRINTF("CLUSTERS: Flushing neighbor table\n");
+		m.neighbourCount = 0;
+		PRINTF("NETWORK: Flushing neighbor table\n");		
+		route_flush_all();		
 		
 		//Full power & mesh reinitialize
 		setPower(CC2420_TXPOWER_MAX);
@@ -258,8 +251,6 @@ void toggleEmergencyOne() {
 	} else {
 		status.ackCounter=0;	
 		status.emergencyOne=0;
-		mesh_refresh_interval = MESH_REFRESH_INTERVAL;	
-		etimer_set(&meshRefreshInterval, mesh_refresh_interval);
 	}	
 }
 
@@ -270,7 +261,7 @@ static void triggerEmergencyTwo() {
 	}
 	
 	status.emergencyTwo = 1;
-	PRINTF("EMERGENCY: Emergency Two triggered\n");
+	PRINTF("EMERGENCY: #2 Triggered\n");
 
 	resetCmdMsg(&command);
 	command.cmd = CMD_EMERGENCY_TWO;
@@ -291,7 +282,7 @@ static void cancelEmergencyTwo() {
 		return;
 	} 
 
-	PRINTF("EMERGENCY: Emergency Two canceled\n");
+	PRINTF("EMERGENCY: #2 Canceled\n");
 	status.emergencyTwo = 0;
 	resetCmdMsg(&command);
 	command.cmd = CMD_CANCEL_EMERGENCY_TWO;
@@ -633,11 +624,21 @@ PROCESS_THREAD(neighbors, ev, data)
 	PROCESS_WAIT_EVENT();
 	etimer_set(&neighborAdvertismentInterval, neighbor_advertisment_interval);
 	etimer_set(&neighborSenseInterval, neighbor_sense_interval);
+	//etimer_set(&clusterRefreshInterval, CLUSTER_INTERVAL);
 
 	while(1) {
 		
 		PROCESS_WAIT_EVENT();
-		
+
+		//Cluster reinitialization interval
+		if(etimer_expired(&clusterRefreshInterval)){
+
+			//If I am local gateway or a member of cluster disable cluster setting and procceed with 1 minute learning mode for new cluster setup
+			if(status.iAmGateway == 1 || status.iAmInCluster == 1){
+				clusterLearningMode();
+			}
+		}
+
 		//sense neighbors every cca 5s for 1s
 		if(etimer_expired(&neighborSenseInterval)){
 			
@@ -657,12 +658,7 @@ PROCESS_THREAD(neighbors, ev, data)
 								
 		//send advertisment to your neighbors every 5s
 		if(etimer_expired(&neighborAdvertismentInterval)){
-			
-			//If I am local gateway or a member of cluster disable cluster setting and procceed with 1 minute learning mode for new cluster setup
-			if(status.iAmGateway == 1 || status.iAmInCluster == 1){
-				clusterLearningMode();
-			}
-
+						
 			broadcast_open(&broadcast, 129, &broadcast_call);
  			packetbuf_copyfrom("Hello", 5);    
     		broadcast_send(&broadcast);
