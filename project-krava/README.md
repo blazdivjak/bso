@@ -1,4 +1,4 @@
-Wireless sensors netwoks projects
+Wireless sensors netwoks project: Catle herd management
 =======================================================================
 
 Authors
