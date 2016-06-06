@@ -5,7 +5,7 @@
 */
 #include "krava.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG
 #include <stdio.h>
@@ -44,7 +44,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
 
   //ACK
   if(packetbuf_datalen()==1){
-  	PRINTF("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
+  	printf("MESSAGES: Message ID: %d ACK received.\n", ((uint8_t *)packetbuf_dataptr())[0]);
   	findRemoveFromAckList(((uint8_t *)packetbuf_dataptr())[0], from->u8[0]);
   	status.ackCounter+=1;
   }
@@ -66,6 +66,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   }
   //Gateway command
   else if((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_CMD){
+  	printf("MESSAGES: received command from gateway\n");
   	//Send ACK for packet  	
   	packetbuf_copyfrom(packetbuf_dataptr(), 1);
     mesh_send(&mesh, from); // send ACK
@@ -81,6 +82,7 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   I need to forward them to default gateway
   */
   else {
+  	printf("MESSAGES: received message from cluster member. Forwarding it to gateway %d.0\n", currentGateway);
   	//Send ACK for packet  	
   	packetbuf_copyfrom(packetbuf_dataptr(), 1);
     mesh_send(&mesh, from); // send ACK
@@ -167,7 +169,7 @@ Cluster handling
 void clusterLearningMode(){
 
 	//Disable cluster
-	PRINTF("CLUSTERS: Initializing cluster learning mode.\n");
+	printf("CLUSTERS: Initializing cluster learning mode.\n");
 	status.iAmGateway = 0;
 	status.iAmInCluster = 0;
 
@@ -228,7 +230,7 @@ void cancelSysEmergencyOne() {
 	if(status.emergencyOne != 0) {
 		
 		//Back to previous power level		
-		if(status.iAmInCluster){
+		if(status.iAmInCluster && command.target_id != node_id){
 			setPower(15);	
 		}else{
 			setPower(CC2420_TXPOWER_MAX);
@@ -259,7 +261,7 @@ void cancelSysEmergencyTwo() {
 void toggleEmergencyOne() {
 	
 	if(status.ackCounter==0) {
-		PRINTF("EMERGENCY: #1 Lost connectivity to gateway.\n");
+		printf("EMERGENCY: #1 Lost connectivity to gateway.\n");
 		status.emergencyOne = 1;
 		status.iAmGateway = 0;
 		status.iAmInCluster = 0;
@@ -325,7 +327,7 @@ Power handling
 void setPower(uint8_t powerLevel) {
 		
 	txpower = cc2420_get_txpower();
-	PRINTF("POWER: Previous: %d Now: %d\n", txpower, powerLevel);
+	printf("POWER: Previous: %d Now: %d\n", txpower, powerLevel);
 	cc2420_set_txpower(powerLevel);	
 
 }
@@ -349,7 +351,7 @@ static void setAddress(uint8_t myAddress_1, uint8_t myAddress_2) {
 
 static void setCurrentGateway(uint8_t currentGatewayAddress) {
 
-	PRINTF("NETWORK: Setting current gateway to: %d\n", currentGatewayAddress);
+	printf("CLUSTERS: Setting current gateway to: %d\n", currentGatewayAddress);
 	currentGateway = currentGatewayAddress;
 }
 
@@ -385,7 +387,9 @@ void sendMessage() {
 	setMsgId(&m, m.id+1);
 
 	PRINTF("MESSAGES: Sending message with content of size %d bytes\n", getEncodeDataSize(&m));
+	#if DEBUG
 	printMessage(&m);
+	#endif
 
 	linkaddr_t addr_send; 
 	uint8_t size = encodeData(&m, send_buffer);

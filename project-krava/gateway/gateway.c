@@ -5,7 +5,7 @@
  */
 #include "gateway.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG
 #include <stdio.h>
@@ -141,7 +141,7 @@ static void timedout(struct mesh_conn *c) {
 }
 
 static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
-  PRINTF("MESSAGES: Data received from %d.%d: %d bytes, id: %d\n",from->u8[0], from->u8[1], packetbuf_datalen(), ((uint8_t *)packetbuf_dataptr())[0]);
+  printf("MESSAGES: Data received from %d.%d: %d bytes, id: %d\n",from->u8[0], from->u8[1], packetbuf_datalen(), ((uint8_t *)packetbuf_dataptr())[0]);
 	
 
   // ACK
@@ -155,7 +155,9 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     // message decode
     Message m;
     decode(packetbuf_dataptr(), packetbuf_datalen(), &m);
+    #if DEBUG
     printMessage(&m);
+    #endif
     packetbuf_copyfrom(&m.id, 1);
     mesh_send(&mesh, from); // send ACK
 
@@ -183,6 +185,8 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   else if ((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_CMD) { 
     CmdMsg command;
     decodeCmdMsg(packetbuf_dataptr(), &command);
+    printf("Received command:\n");
+    printCmdMsg(&command);
 
     packetbuf_copyfrom(&command.id, 1);
     mesh_send(&mesh, from); // send ACK
@@ -210,7 +214,9 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
     cows_seen_counter[cow_index] += 1;
     cows_seen_counter_status |= 1 << cow_index;
 
+    #if DEBUG
     printEmergencyMsg(&eMsg);
+    #endif
   }
 }
 
@@ -427,7 +433,7 @@ static void handle_missing_cows() {
   cows_missing = cows_seen_counter_status ^ cows_registered;
   uint32_t old_emergency_missing = status.emergency_missing;
 
-  printf("CATTLE: Cows missing: %s\n", byte_to_binary(cows_missing));
+  PRINTF("CATTLE: Cows missing: %s\n", byte_to_binary(cows_missing));
   int target = find_cow_id_from_bitmap(cows_missing);
   if (count_cows(cows_missing) > 0) {
     // raise alarm two
@@ -569,7 +575,7 @@ PROCESS_THREAD(gateway_main, ev, data)
         );
       } else if (!memcmp(CMD_QUERY, data, 3)) {
           uint8_t qId = atoi(&data[3]);
-          PRINTF("QUERY COMMAND: Mote ID = %d\n", qId);
+          printf("QUERY COMMAND: Target mote_id = %d\n", qId);
           PRINTF("COMMAND: Adding command %d taget: %d to buffer.\n", CMD_CANCEL_EMERGENCY_ONE, qId);
           ringbuf_put(&commanderBuff, CMD_QUERY_MOTE);  // cmd 
           ringbuf_put(&commanderBuff, qId); //target
