@@ -148,6 +148,11 @@ static void recv(struct mesh_conn *c, const linkaddr_t *from, uint8_t hops) {
   if(packetbuf_datalen()==1){
     PRINTF("MESSAGES: Message ID: %d ACK received from %d.\n", ((uint8_t *)packetbuf_dataptr())[0], from->u8[0]);
     findRemoveFromAckList(((uint8_t *)packetbuf_dataptr())[0], from->u8[0]);
+    // find cows index in data structures
+    int cow_index = find_cow_with_id(from->u8[0]);
+    // update info on how many times the cow is seen
+    cows_seen_counter[cow_index] += 1;
+    cows_seen_counter_status |= 1 << cow_index;
   }
   // Krava message
   else if ((((uint8_t *)packetbuf_dataptr())[0] & 0x03) == MSG_MESSAGE) {
